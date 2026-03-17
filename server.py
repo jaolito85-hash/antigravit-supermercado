@@ -4111,6 +4111,15 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         ]
         reply = random.choice(despedidas)
         send_whatsapp_message(remote_jid, reply)
+        # Grava mensagem de encerramento e despedida no histórico do card
+        active_feedback = get_active_feedback(remote_jid)
+        if active_feedback:
+            updated_msg = append_conversation_entry(active_feedback.get('message', ''), 'client', text)
+            updated_msg = append_conversation_entry(updated_msg, 'agent', reply)
+            update_feedback(active_feedback['id'], {
+                'message': updated_msg,
+                'updated_at': datetime.utcnow().isoformat()
+            })
         return jsonify({'status': 'conversation_closed'}), 200
 
     intencao = detectar_intencao(text)
