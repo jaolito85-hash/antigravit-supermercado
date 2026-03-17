@@ -4205,7 +4205,14 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
             new_category = (categoria or '').strip().lower()
             same_category = old_category == new_category
 
-            if same_category:
+            # Incidentes críticos (roubo, acidente, fogo etc.) SEMPRE geram novo card
+            # São ocorrências independentes, não continuação de conversa anterior
+            is_critical_new_incident = (
+                sentimento == 'Critico'
+                or is_store_incident_issue(text)
+            )
+
+            if same_category and not is_critical_new_incident:
                 print(f"[THREADING] Same category '{categoria}' â€” appending to feedback {active_feedback.get('id')}")
 
                 current_urgency = active_feedback.get('urgency', 'Neutro')
@@ -4244,7 +4251,8 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 record_agent_reply(active_feedback['id'], updated_message or active_feedback['message'], reply)
                 return jsonify({"status": "updated_existing", "id": active_feedback['id']}), 200
             else:
-                print(f"[THREADING] Category changed '{old_category}' â†’ '{categoria}' â€” creating NEW card linked to {active_feedback.get('id')}")
+                motivo = 'incidente_critico' if is_critical_new_incident else f'categoria_{old_category}_para_{categoria}'
+                print(f"[THREADING] Novo card — motivo: {motivo} — linked to {active_feedback.get('id')}")
                 linked_from_id = active_feedback.get('id')
 
         now = datetime.utcnow()
