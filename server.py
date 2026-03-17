@@ -2200,6 +2200,27 @@ THANK_YOU_PATTERNS = {
     'obrigado viu', 'obrigada viu', 'show obrigado', 'show obrigada'
 }
 
+# Frases que indicam que o cliente está encerrando a conversa
+WRAP_UP_PATTERNS = {
+    # "só isso"
+    'so isso', 'só isso', 'so isso mesmo', 'só isso mesmo', 'era so isso',
+    'era só isso', 'e so isso', 'é só isso', 'so isso por ora', 'só isso por ora',
+    # "era isso"
+    'era isso', 'era isso mesmo', 'e isso', 'é isso', 'e isso mesmo', 'é isso mesmo',
+    'era so isso mesmo', 'era só isso mesmo',
+    # despedidas
+    'tchau', 'tchauu', 'tchauzinho', 'ate mais', 'até mais', 'ate logo', 'até logo',
+    'ate breve', 'até breve', 'fui', 'fui la', 'fui lá', 'abcos', 'abs',
+    'boa noite', 'boa tarde', 'bom dia',
+    # encerramento com agradecimento
+    'ok obrigado', 'ok obrigada', 'ok valeu', 'tudo bem obrigado', 'tudo bem obrigada',
+    'tudo bem valeu', 'ta bom obrigado', 'ta bom obrigada', 'tá bom obrigado',
+    'pode fechar', 'pode encerrar', 'encerrado', 'sem mais',
+    # confirmações de encerramento
+    'tudo bem', 'tudo certo', 'ta bom', 'tá bom', 'ok', 'entendi', 'certo',
+    'combinado', 'perfeito obrigado', 'perfeito valeu',
+}
+
 NEGATIVE_SIGNAL_PATTERNS = (
     'fila', 'demora', 'atraso', 'sujo', 'sujeira', 'caro', 'preco alto',
     'preço alto', 'problema', 'ruim', 'mal atendido', 'mal atendida',
@@ -2234,6 +2255,30 @@ def is_customer_thank_you_message(text):
     return any(
         normalized.startswith(pattern) or f" {pattern}" in normalized
         for pattern in THANK_YOU_PATTERNS
+    )
+
+def is_conversation_wrap_up(text):
+    """Detecta se o cliente está encerrando a conversa.
+
+    Cobre frases como 'só isso mesmo', 'era isso', 'tchau', 'tudo bem',
+    que indicam que o cliente não tem mais nada a acrescentar.
+    """
+    normalized = normalize_text(text or '').strip().rstrip('!.?')
+    if not normalized:
+        return False
+    # Match exato
+    if normalized in WRAP_UP_PATTERNS:
+        return True
+    # Match exato também para agradecimentos
+    if normalized in THANK_YOU_PATTERNS:
+        return True
+    # Mensagem curta (até 5 tokens) que começa ou contém padrão de encerramento
+    tokens = [t for t in normalized.split() if t]
+    if len(tokens) > 6:
+        return False
+    return any(
+        normalized == pattern or normalized.startswith(pattern) or normalized.endswith(pattern)
+        for pattern in WRAP_UP_PATTERNS
     )
 
 def is_agent_identity_question(text):
@@ -4053,6 +4098,20 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
             return jsonify({"status": "offers_followup_list"}), 200
 
     conversation_context.pop(remote_jid, None)
+
+    # Detecta encerramento antes de classificar intenção — evita resposta fora de contexto
+    # para frases como 'só isso mesmo', 'era isso', 'tchau', 'tudo bem'
+    if is_conversation_wrap_up(text):
+        import random
+        despedidas = [
+            'Fico feliz em ajudar. Até mais! 😊',
+            'Pode contar comigo sempre. Até mais!',
+            'Obrigado por falar com a gente. Até logo!',
+            'Ótimo! Qualquer coisa é só chamar.',
+        ]
+        reply = random.choice(despedidas)
+        send_whatsapp_message(remote_jid, reply)
+        return jsonify({'status': 'conversation_closed'}), 200
 
     intencao = detectar_intencao(text)
     print(f"ðŸ” [INTENT] {intencao}: {text[:50]}")
