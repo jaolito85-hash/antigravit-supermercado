@@ -1,0 +1,8 @@
+flask
+supabase
+python-dotenv
+requests
+gunicorn
+openai
+thefuzz
+python-Levenshtein

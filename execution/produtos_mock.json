@@ -1,0 +1,282 @@
+[
+    {
+        "nome": "Banana Prata",
+        "categoria": "Frutas",
+        "preco": 5.99,
+        "preco_promo": 4.49,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Maçã Fuji",
+        "categoria": "Frutas",
+        "preco": 8.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Laranja Pera",
+        "categoria": "Frutas",
+        "preco": 4.99,
+        "preco_promo": 3.99,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Mamão Papaia",
+        "categoria": "Frutas",
+        "preco": 7.49,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Morango",
+        "categoria": "Frutas",
+        "preco": 12.99,
+        "preco_promo": 9.99,
+        "em_estoque": false,
+        "unidade": "bandeja"
+    },
+    {
+        "nome": "Leite Integral",
+        "categoria": "Laticínios",
+        "preco": 6.49,
+        "preco_promo": 5.49,
+        "em_estoque": true,
+        "unidade": "L"
+    },
+    {
+        "nome": "Queijo Mussarela",
+        "categoria": "Laticínios",
+        "preco": 39.90,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Iogurte Natural",
+        "categoria": "Laticínios",
+        "preco": 4.99,
+        "preco_promo": 3.79,
+        "em_estoque": true,
+        "unidade": "un"
+    },
+    {
+        "nome": "Manteiga com Sal",
+        "categoria": "Laticínios",
+        "preco": 8.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "200g"
+    },
+    {
+        "nome": "Picanha Bovina",
+        "categoria": "Carnes",
+        "preco": 69.90,
+        "preco_promo": 59.90,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Frango Inteiro",
+        "categoria": "Carnes",
+        "preco": 14.90,
+        "preco_promo": 12.90,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Carne Moída",
+        "categoria": "Carnes",
+        "preco": 29.90,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Linguiça Toscana",
+        "categoria": "Carnes",
+        "preco": 19.90,
+        "preco_promo": 16.90,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Filé de Tilápia",
+        "categoria": "Carnes",
+        "preco": 34.90,
+        "preco_promo": null,
+        "em_estoque": false,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Pão Francês",
+        "categoria": "Padaria",
+        "preco": 16.90,
+        "preco_promo": 14.90,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Bolo de Chocolate",
+        "categoria": "Padaria",
+        "preco": 22.90,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "un"
+    },
+    {
+        "nome": "Pão de Queijo",
+        "categoria": "Padaria",
+        "preco": 29.90,
+        "preco_promo": 24.90,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Arroz Tipo 1 5kg",
+        "categoria": "Mercearia",
+        "preco": 27.90,
+        "preco_promo": 23.90,
+        "em_estoque": true,
+        "unidade": "5kg"
+    },
+    {
+        "nome": "Feijão Carioca 1kg",
+        "categoria": "Mercearia",
+        "preco": 8.49,
+        "preco_promo": 6.99,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Macarrão Espaguete",
+        "categoria": "Mercearia",
+        "preco": 4.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "500g"
+    },
+    {
+        "nome": "Óleo de Soja",
+        "categoria": "Mercearia",
+        "preco": 7.99,
+        "preco_promo": 6.49,
+        "em_estoque": true,
+        "unidade": "900ml"
+    },
+    {
+        "nome": "Açúcar Cristal 1kg",
+        "categoria": "Mercearia",
+        "preco": 5.49,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Café Torrado 500g",
+        "categoria": "Mercearia",
+        "preco": 18.90,
+        "preco_promo": 15.90,
+        "em_estoque": true,
+        "unidade": "500g"
+    },
+    {
+        "nome": "Coca-Cola 2L",
+        "categoria": "Bebidas",
+        "preco": 10.99,
+        "preco_promo": 8.99,
+        "em_estoque": true,
+        "unidade": "2L"
+    },
+    {
+        "nome": "Cerveja Lata 350ml",
+        "categoria": "Bebidas",
+        "preco": 3.49,
+        "preco_promo": 2.99,
+        "em_estoque": true,
+        "unidade": "un"
+    },
+    {
+        "nome": "Suco de Laranja 1L",
+        "categoria": "Bebidas",
+        "preco": 8.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "L"
+    },
+    {
+        "nome": "Água Mineral 1.5L",
+        "categoria": "Bebidas",
+        "preco": 2.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "1.5L"
+    },
+    {
+        "nome": "Detergente 500ml",
+        "categoria": "Limpeza",
+        "preco": 2.99,
+        "preco_promo": 1.99,
+        "em_estoque": true,
+        "unidade": "un"
+    },
+    {
+        "nome": "Sabão em Pó 1kg",
+        "categoria": "Limpeza",
+        "preco": 12.90,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Papel Higiênico 12 rolos",
+        "categoria": "Higiene",
+        "preco": 19.90,
+        "preco_promo": 15.90,
+        "em_estoque": true,
+        "unidade": "pct"
+    },
+    {
+        "nome": "Tomate",
+        "categoria": "Hortifrúti",
+        "preco": 8.99,
+        "preco_promo": 6.99,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Cebola",
+        "categoria": "Hortifrúti",
+        "preco": 5.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Batata",
+        "categoria": "Hortifrúti",
+        "preco": 6.49,
+        "preco_promo": 4.99,
+        "em_estoque": true,
+        "unidade": "kg"
+    },
+    {
+        "nome": "Alface",
+        "categoria": "Hortifrúti",
+        "preco": 3.49,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "un"
+    },
+    {
+        "nome": "Cenoura",
+        "categoria": "Hortifrúti",
+        "preco": 5.99,
+        "preco_promo": null,
+        "em_estoque": true,
+        "unidade": "kg"
+    }
+]

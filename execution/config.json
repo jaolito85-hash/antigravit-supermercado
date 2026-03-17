@@ -1,0 +1,71 @@
+{
+    "categories": [
+        {
+            "name": "Atendimento",
+            "color": "#3b82f6",
+            "count": 0
+        },
+        {
+            "name": "Fila",
+            "color": "#f59e0b",
+            "count": 0
+        },
+        {
+            "name": "Hortifrúti",
+            "color": "#10b981",
+            "count": 0
+        },
+        {
+            "name": "Padaria",
+            "color": "#f97316",
+            "count": 0
+        },
+        {
+            "name": "Açougue",
+            "color": "#ef4444",
+            "count": 0
+        },
+        {
+            "name": "Limpeza",
+            "color": "#8b5cf6",
+            "count": 0
+        },
+        {
+            "name": "Preço",
+            "color": "#ec4899",
+            "count": 0
+        },
+        {
+            "name": "Promoção",
+            "color": "#14b8a6",
+            "count": 0
+        },
+        {
+            "name": "Estacionamento",
+            "color": "#6366f1",
+            "count": 0
+        }
+    ],
+    "regions": [
+        {
+            "name": "Matriz",
+            "count": 0
+        },
+        {
+            "name": "Filial Centro",
+            "count": 0
+        },
+        {
+            "name": "Filial Norte",
+            "count": 0
+        },
+        {
+            "name": "Filial Sul",
+            "count": 0
+        }
+    ],
+    "promotions": {
+        "day": "",
+        "week": ""
+    }
+}

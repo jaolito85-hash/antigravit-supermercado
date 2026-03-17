@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Guia - Aba Inteligência | Node Data</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1117;
+            color: #e5e7eb;
+            padding: 40px;
+            line-height: 1.7;
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: #1a1a1a;
+                padding: 20px;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .cover {
+                background: #0f1117 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .cover * {
+                color: white !important;
+            }
+
+            .section-card {
+                border: 1px solid #e5e7eb;
+                box-shadow: none;
+            }
+
+            .metric-box {
+                background: #f9fafb !important;
+                border: 1px solid #e5e7eb;
+            }
+
+            .metric-box * {
+                color: #1a1a1a !important;
+            }
+
+            .example-box {
+                background: #f0fdf4 !important;
+                border-color: #22c55e !important;
+            }
+
+            .example-box * {
+                color: #1a1a1a !important;
+            }
+
+            .tag {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            table {
+                border: 1px solid #e5e7eb;
+            }
+
+            th {
+                background: #f3f4f6 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            td,
+            th {
+                color: #1a1a1a !important;
+                border-color: #e5e7eb !important;
+            }
+        }
+
+        /* COVER */
+        .cover {
+            background: linear-gradient(135deg, #0f1117 0%, #1a1c2e 100%);
+            border-radius: 20px;
+            padding: 60px 50px;
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cover::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 70% 50%, rgba(34, 197, 94, 0.08) 0%, transparent 50%);
+        }
+
+        .cover-badge {
+            display: inline-block;
+            background: rgba(168, 85, 247, 0.15);
+            color: #a855f7;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .cover h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            position: relative;
+            background: linear-gradient(135deg, #a855f7, #22c55e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .cover p {
+            font-size: 1.1rem;
+            color: #9ca3af;
+            max-width: 500px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .cover-footer {
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: #6b7280;
+            position: relative;
+        }
+
+        /* SECTIONS */
+        .section-card {
+            background: #1a1c2e;
+            border-radius: 16px;
+            padding: 36px;
+            margin-bottom: 30px;
+            border: 1px solid #2a2d3e;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .section-subtitle {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .section-body {
+            font-size: 0.95rem;
+            color: #d1d5db;
+        }
+
+        .section-body p {
+            margin-bottom: 14px;
+        }
+
+        /* METRICS */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+
+        .metric-box {
+            background: #0f1117;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid;
+        }
+
+        .metric-box h4 {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            opacity: 0.8;
+        }
+
+        .metric-box .value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .metric-box .explain {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            line-height: 1.5;
+        }
+
+        /* EXAMPLE BOX */
+        .example-box {
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .example-box .label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #22c55e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .example-box p {
+            font-size: 0.9rem;
+            color: #d1d5db;
+            font-style: italic;
+            margin: 0;
+        }
+
+        /* TABLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: #0f1117;
+            color: #a855f7;
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2d3e;
+            color: #d1d5db;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* TAGS */
+        .tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .tag-green {
+            background: #22c55e20;
+            color: #22c55e;
+        }
+
+        .tag-red {
+            background: #ef444420;
+            color: #ef4444;
+        }
+
+        .tag-yellow {
+            background: #f59e0b20;
+            color: #f59e0b;
+        }
+
+        .tag-purple {
+            background: #a855f720;
+            color: #a855f7;
+        }
+
+        .tag-blue {
+            background: #3b82f620;
+            color: #3b82f6;
+        }
+
+        /* FORMULA */
+        .formula {
+            background: #0f1117;
+            border: 1px solid #2a2d3e;
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #a855f7;
+            margin: 12px 0;
+            text-align: center;
+        }
+
+        /* HIGHLIGHT */
+        .highlight {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(34, 197, 94, 0.1));
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .highlight p {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin: 0;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #2a2d3e;
+            margin: 16px 0;
+        }
+
+        .note {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- COVER -->
+    <div class="cover">
+        <div class="cover-badge">📖 Guia do Proprietário</div>
+        <h1>Aba Inteligência</h1>
+        <p>Entenda como cada número te ajuda a tomar decisões melhores e reter mais clientes</p>
+        <div class="cover-footer">Node Data • Dashboard de Supermercado • 2026</div>
+    </div>
+
+    <!-- WHAT IS -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #a855f720; color: #a855f7;">🧠</div>
+            <div>
+                <div class="section-title">O que é a aba Inteligência?</div>
+                <div class="section-subtitle">Visão geral</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>A aba <strong>Inteligência</strong> transforma os feedbacks dos seus clientes em <strong>informação
+                    acionável</strong>. Em vez de apenas ler reclamações, você vê:</p>
+            <div class="metrics-grid">
+                <div class="metric-box" style="border-color: #22c55e;">
+                    <h4>💰 ROI do Feedback</h4>
+                    <div class="explain">Quanto dinheiro você está salvando ao resolver reclamações</div>
+                </div>
+                <div class="metric-box" style="border-color: #3b82f6;">
+                    <h4>🕵️ Radar de Concorrência</h4>
+                    <div class="explain">Quando seus clientes mencionam concorrentes e por quê</div>
+                </div>
+                <div class="metric-box" style="border-color: #ef4444;">
+                    <h4>🚨 Alertas de Crise</h4>
+                    <div class="explain">Problemas que estão crescendo agora e precisam de ação imediata</div>
+                </div>
+                <div class="metric-box" style="border-color: #f59e0b;">
+                    <h4>⏰ Horários Críticos</h4>
+                    <div class="explain">Em que horário os problemas mais acontecem</div>
+                </div>
+            </div>
+            <div class="metric-box" style="border-color: #a855f7; max-width: 100%;">
+                <h4>👤 Detector de Êxodo</h4>
+                <div class="explain">Quais clientes fiéis estão prestes a te abandonar</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ROI -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #22c55e20; color: #22c55e;">💰</div>
+            <div>
+                <div class="section-title">ROI do Feedback</div>
+                <div class="section-subtitle">Quanto vale resolver uma reclamação?</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>Cada cliente gasta em média <strong>R$ 500 por mês</strong> no seu mercado. Quando um cliente faz uma
+                reclamação grave e você resolve, esse cliente <strong>continua comprando</strong>. Se não resolve, ele
+                <strong>vai embora</strong>.</p>
+
+            <div class="metrics-grid">
+                <div class="metric-box" style="border-color: #22c55e;">
+                    <h4>✅ Receita Retida</h4>
+                    <div class="value" style="color: #22c55e;">Dinheiro SALVO</div>
+                    <div class="explain">Reclamações graves que você resolveu × R$ 500/mês. São clientes que iriam
+                        embora mas ficaram graças à sua ação.</div>
+                </div>
+                <div class="metric-box" style="border-color: #ef4444;">
+                    <h4>⚠️ Receita em Risco</h4>
+                    <div class="value" style="color: #ef4444;">Dinheiro que PODE PERDER</div>
+                    <div class="explain">Reclamações graves ainda abertas × R$ 500/mês. São clientes insatisfeitos que
+                        podem ir pro concorrente a qualquer momento.</div>
+                </div>
+                <div class="metric-box" style="border-color: #3b82f6;">
+                    <h4>📊 Taxa de Resolução</h4>
+                    <div class="value" style="color: #3b82f6;">Sua eficiência</div>
+                    <div class="explain">Porcentagem de reclamações graves já resolvidas. Quanto maior, mais clientes
+                        você está salvando.</div>
+                </div>
+                <div class="metric-box" style="border-color: #a855f7;">
+                    <h4>📈 Projeção Anual</h4>
+                    <div class="value" style="color: #a855f7;">Visão de 12 meses</div>
+                    <div class="explain">Receita Retida × 12 meses. Mostra o impacto total de resolver feedbacks ao
+                        longo do ano.</div>
+                </div>
+            </div>
+
+            <div class="formula">
+                Receita Retida = Reclamações graves resolvidas × R$ 500/mês
+            </div>
+
+            <div class="example-box">
+                <div class="label">💡 Exemplo prático</div>
+                <p>"Você recebeu 20 reclamações graves este mês. Resolveu 12 delas. Isso significa que salvou R$
+                    6.000/mês em receita — ou R$ 72.000/ano. As 8 reclamações ainda abertas representam R$ 4.000/mês em
+                    risco."</p>
+            </div>
+
+            <p class="note">📌 O valor de R$ 500/mês é uma estimativa do gasto médio mensal de um cliente. Este valor
+                pode ser ajustado conforme a realidade do seu mercado.</p>
+        </div>
+    </div>
+
+    <!-- COMPETITORS -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #3b82f620; color: #3b82f6;">🕵️</div>
+            <div>
+                <div class="section-title">Radar de Concorrência</div>
+                <div class="section-subtitle">Para quem seus clientes estão olhando?</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>O sistema analisa <strong>todas as mensagens</strong> dos clientes e detecta automaticamente quando
+                mencionam um concorrente. São mais de <strong>30 nomes mapeados</strong> incluindo:</p>
+
+            <p>
+                <span class="tag tag-blue">Assaí</span>
+                <span class="tag tag-blue">Atacadão</span>
+                <span class="tag tag-blue">Carrefour</span>
+                <span class="tag tag-blue">Pão de Açúcar</span>
+                <span class="tag tag-blue">Extra</span>
+                <span class="tag tag-blue">Big</span>
+                <span class="tag tag-blue">Sam's Club</span>
+                <span class="tag tag-blue">Fort Atacadista</span>
+                <span class="tag tag-blue">Oba</span>
+                <span class="tag tag-blue">Savegnago</span>
+                <span class="tag tag-blue">e mais...</span>
+            </p>
+
+            <p>Cada menção é classificada pelo <strong>motivo</strong> da comparação:</p>
+
+            <table>
+                <tr>
+                    <th>Contexto</th>
+                    <th>O que significa</th>
+                    <th>Exemplo do cliente</th>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-red">💲 Preço</span></td>
+                    <td>O concorrente está mais barato</td>
+                    <td>"No Assaí a carne tá metade do preço"</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-yellow">📦 Variedade</span></td>
+                    <td>O concorrente tem mais opções</td>
+                    <td>"O Atacadão tem mais cervejas importadas"</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-green">⭐ Qualidade</span></td>
+                    <td>O concorrente tem produtos melhores</td>
+                    <td>"O Carrefour tem hortifrúti melhor"</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-purple">🤝 Atendimento</span></td>
+                    <td>O concorrente atende melhor</td>
+                    <td>"Lá os funcionários são mais simpáticos"</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-blue">🅿️ Estrutura</span></td>
+                    <td>Estacionamento, limpeza, organização</td>
+                    <td>"Lá tem mais vaga no estacionamento"</td>
+                </tr>
+            </table>
+
+            <div class="example-box">
+                <div class="label">💡 Como usar essa informação</div>
+                <p>"Se 8 clientes mencionaram o Assaí no contexto de Preço, não é coincidência. É hora de comparar seus
+                    preços com os do Assaí nos itens mais vendidos e ajustar a estratégia."</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- CRISIS -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #ef444420; color: #ef4444;">🚨</div>
+            <div>
+                <div class="section-title">Alertas de Crise</div>
+                <div class="section-subtitle">Seu alarme de incêndio digital</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>O sistema monitora as reclamações das <strong>últimas 48 horas</strong> e detecta quando alguma categoria
+                tem um <strong>pico anormal</strong>. Se normalmente você recebe 1 reclamação de Hortifrúti por semana,
+                e de repente chegam 6 em 2 dias — é uma crise.</p>
+
+            <table>
+                <tr>
+                    <th>Nível</th>
+                    <th>Quando aparece</th>
+                    <th>O que fazer</th>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-red">🔴 CRÍTICO</span></td>
+                    <td>Muitas reclamações graves na mesma categoria em poucas horas</td>
+                    <td>Ação imediata — ir ao setor, falar com responsável</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-yellow">🟡 ATENÇÃO</span></td>
+                    <td>Volume crescente de reclamações em uma categoria</td>
+                    <td>Monitorar de perto e investigar</td>
+                </tr>
+            </table>
+
+            <p>O sistema também mostra as <strong>palavras mais citadas</strong> nas reclamações, para você entender
+                rapidamente o que está acontecendo.</p>
+
+            <div class="example-box">
+                <div class="label">💡 Exemplo real</div>
+                <p>"Alerta: Hortifrúti — 6 reclamações em 48h. Palavras: 'podre', 'estragado', 'mofado'. Isso significa
+                    que provavelmente houve um problema com o fornecedor ou com a temperatura da câmara fria. Ação:
+                    verificar lote de frutas imediatamente."</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CRITICAL HOURS -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #f59e0b20; color: #f59e0b;">⏰</div>
+            <div>
+                <div class="section-title">Horários Críticos</div>
+                <div class="section-subtitle">Quando os problemas acontecem?</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>Analisa o horário de cada reclamação e mostra os <strong>picos de insatisfação</strong>. Isso revela
+                padrões que você não vê olhando reclamação por reclamação.</p>
+
+            <table>
+                <tr>
+                    <th>Padrão comum</th>
+                    <th>O que indica</th>
+                    <th>Solução</th>
+                </tr>
+                <tr>
+                    <td>Muitas reclamações de <strong>fila</strong> entre 17h-19h</td>
+                    <td>Poucos caixas abertos no horário de pico</td>
+                    <td>Escalar mais operadores nesse horário</td>
+                </tr>
+                <tr>
+                    <td>Reclamações de <strong>falta de produto</strong> entre 10h-12h</td>
+                    <td>Reposição não acompanha a demanda da manhã</td>
+                    <td>Antecipar reposição para antes das 9h</td>
+                </tr>
+                <tr>
+                    <td>Reclamações de <strong>hortifrúti</strong> à tarde</td>
+                    <td>Produtos perdem frescor ao longo do dia</td>
+                    <td>Fazer reposição de hortifrúti 2x ao dia</td>
+                </tr>
+            </table>
+
+            <div class="example-box">
+                <div class="label">💡 Dica de ouro</div>
+                <p>"Se 80% das reclamações de fila acontecem entre 17h e 19h, a solução é simples: coloque mais caixas
+                    abertos nesse horário. Problema resolvido sem gastar nada a mais — só reorganizando a escala."</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- CHURN -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #a855f720; color: #a855f7;">👤</div>
+            <div>
+                <div class="section-title">Detector de Êxodo</div>
+                <div class="section-subtitle">Quem está prestes a te abandonar?</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>Rastreia clientes que <strong>já mandaram 2 ou mais feedbacks</strong> e calcula uma pontuação de risco
+                baseada no comportamento recente:</p>
+
+            <table>
+                <tr>
+                    <th>Sinal de alerta</th>
+                    <th>Peso</th>
+                    <th>Exemplo</th>
+                </tr>
+                <tr>
+                    <td>Inativo há 14+ dias (era frequente)</td>
+                    <td><span class="tag tag-red">+40 pontos</span></td>
+                    <td>Cliente que mandava feedback toda semana sumiu</td>
+                </tr>
+                <tr>
+                    <td>2+ feedbacks negativos recentes</td>
+                    <td><span class="tag tag-red">+30 pontos</span></td>
+                    <td>Últimas reclamações foram todas negativas</td>
+                </tr>
+                <tr>
+                    <td>Últimos feedbacks consecutivos negativos</td>
+                    <td><span class="tag tag-yellow">+20 pontos</span></td>
+                    <td>Os 2 últimos feedbacks são críticos seguidos</td>
+                </tr>
+                <tr>
+                    <td>Mencionou concorrente</td>
+                    <td><span class="tag tag-yellow">+15 pontos</span></td>
+                    <td>"Vou começar a ir no Atacadão"</td>
+                </tr>
+            </table>
+
+            <div class="formula">
+                60+ pontos = 🔴 RISCO ALTO &nbsp;&nbsp;|&nbsp;&nbsp; 30-59 pontos = 🟡 RISCO MÉDIO
+            </div>
+
+            <div class="example-box">
+                <div class="label">💡 Caso real</div>
+                <p>"Maria Silva mandava elogio toda semana. Há 15 dias, reclamou do preço do frango e mencionou o Assaí.
+                    Depois, reclamou do atendimento no caixa. Risco: 85%. Se você ligar pra ela agora e oferecer uma
+                    solução, salva R$ 500/mês. Se ignorar, perde uma cliente fiel."</p>
+            </div>
+
+            <p>O sistema mostra um <strong>botão de WhatsApp</strong> ao lado de cada cliente em risco, para que você
+                possa entrar em contato imediatamente.</p>
+        </div>
+    </div>
+
+    <!-- RECOVERY -->
+    <div class="section-card">
+        <div class="section-header">
+            <div class="section-icon" style="background: #25D36620; color: #25D366;">📨</div>
+            <div>
+                <div class="section-title">Recuperar Clientes (Bônus)</div>
+                <div class="section-subtitle">Resposta em massa com IA</div>
+            </div>
+        </div>
+        <div class="section-body">
+            <p>Na aba <strong>Feedbacks</strong>, ao filtrar por uma categoria e sentimento negativo (Crítico/Urgente),
+                aparece o botão <strong>"Recuperar Clientes"</strong>.</p>
+            <p>Ele abre um modal onde a <strong>Inteligência Artificial</strong> gera automaticamente uma mensagem
+                personalizada para enviar a todos os clientes que reclamaram daquele assunto. Você pode:</p>
+
+            <div class="metrics-grid">
+                <div class="metric-box" style="border-color: #25D366;">
+                    <h4>✍️ Editar a mensagem</h4>
+                    <div class="explain">A IA gera, mas você tem controle total para ajustar</div>
+                </div>
+                <div class="metric-box" style="border-color: #a855f7;">
+                    <h4>✨ Gerar nova versão</h4>
+                    <div class="explain">Não gostou? Clique "Gerar Nova" e a IA cria outra</div>
+                </div>
+                <div class="metric-box" style="border-color: #3b82f6;">
+                    <h4>✅ Selecionar destinatários</h4>
+                    <div class="explain">Escolha para quem enviar com checkboxes</div>
+                </div>
+                <div class="metric-box" style="border-color: #22c55e;">
+                    <h4>📱 Enviar via WhatsApp</h4>
+                    <div class="explain">Clique "Enviar" ao lado de cada cliente e o WhatsApp abre com a mensagem pronta
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL -->
+    <div class="highlight">
+        <p>🎯 A aba Inteligência te mostra 5 coisas:<br><br>
+            <strong>Quanto dinheiro você está salvando</strong> • <strong>Pra quem seus clientes estão olhando</strong>
+            •<br>
+            <strong>Se tem crise acontecendo agora</strong> • <strong>Em que horário os problemas surgem</strong> •<br>
+            <strong>Quais clientes estão prestes a te trocar</strong><br><br>
+            Tudo em tempo real. Tudo automatizado.
+        </p>
+    </div>
+
+    <div style="text-align: center; color: #6b7280; font-size: 0.8rem; margin-top: 30px;">
+        <p>Node Data © 2026 — Inteligência para decisões melhores</p>
+        <p style="margin-top: 6px;">Para imprimir: Ctrl+P → Salvar como PDF</p>
+    </div>
+
+</body>
+
+</html>

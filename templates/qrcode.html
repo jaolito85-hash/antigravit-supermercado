@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atacaforte | QR Code de Feedback</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #06110a;
+            --bg-card: #0d1711;
+            --bg-panel: #132118;
+            --border: rgba(148, 163, 184, 0.14);
+            --text-main: #f8fafc;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --green: #16a34a;
+            --green-strong: #22c55e;
+            --green-soft: rgba(34, 197, 94, 0.16);
+            --orange: #f97316;
+            --orange-soft: rgba(249, 115, 22, 0.18);
+            --white-soft: rgba(255, 255, 255, 0.05);
+            --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            color: var(--text-main);
+            background:
+                radial-gradient(circle at top right, rgba(34, 197, 94, 0.14), transparent 28%),
+                radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.12), transparent 30%),
+                linear-gradient(180deg, #06110a 0%, #08140d 40%, #0a130e 100%);
+            padding: 32px 20px 48px;
+        }
+
+        .page {
+            max-width: 1220px;
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(21, 128, 61, 0.34));
+            border: 1px solid rgba(34, 197, 94, 0.18);
+            color: var(--green-strong);
+            box-shadow: var(--shadow);
+        }
+
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .back-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: var(--text-main);
+            border-color: rgba(34, 197, 94, 0.28);
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .panel {
+            background: linear-gradient(180deg, rgba(19, 33, 24, 0.96), rgba(11, 22, 15, 0.98));
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .form-panel {
+            padding: 30px;
+            position: sticky;
+            top: 24px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            background: rgba(34, 197, 94, 0.08);
+            color: #86efac;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 16px;
+        }
+
+        .form-title {
+            font-size: 2rem;
+            line-height: 1.05;
+            letter-spacing: -0.05em;
+            margin-bottom: 10px;
+        }
+
+        .form-title span {
+            color: var(--green-strong);
+        }
+
+        .form-subtitle {
+            color: var(--text-muted);
+            line-height: 1.65;
+            font-size: 0.95rem;
+            margin-bottom: 26px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.77rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+
+        .field input,
+        .field textarea {
+            width: 100%;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+            border-radius: 16px;
+            padding: 14px 16px;
+            font: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .field textarea {
+            min-height: 108px;
+            resize: vertical;
+        }
+
+        .field input:focus,
+        .field textarea:focus {
+            outline: none;
+            border-color: rgba(34, 197, 94, 0.45);
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+        }
+
+        .field-hint {
+            margin-top: 7px;
+            color: var(--text-dim);
+            font-size: 0.77rem;
+            line-height: 1.45;
+        }
+
+        .theme-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .theme-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .theme-dot.active {
+            border-color: rgba(255, 255, 255, 0.85);
+            transform: scale(1.06);
+        }
+
+        .primary-btn,
+        .ghost-btn {
+            border: none;
+            cursor: pointer;
+            font: inherit;
+            border-radius: 16px;
+            padding: 15px 18px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        }
+
+        .primary-btn {
+            width: 100%;
+            margin-top: 6px;
+            color: white;
+            background: linear-gradient(135deg, var(--green), #15803d);
+            box-shadow: 0 14px 30px rgba(22, 163, 74, 0.28);
+        }
+
+        .primary-btn:hover,
+        .ghost-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .preview-panel {
+            padding: 30px;
+            display: grid;
+            gap: 20px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 410px) minmax(0, 1fr);
+            gap: 20px;
+        }
+
+        .qr-card,
+        .poster-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+        }
+
+        .qr-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .qr-card::before {
+            content: '';
+            position: absolute;
+            top: -80px;
+            right: -50px;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.15), transparent 70%);
+            pointer-events: none;
+        }
+
+        .logo-shell {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .logo-badge {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #0f8c3b, #0a5f28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 4px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+            flex-shrink: 0;
+        }
+
+        .logo-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .logo-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            gap: 2px;
+        }
+
+        .logo-fallback strong {
+            font-size: 0.95rem;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .logo-fallback span {
+            font-size: 0.62rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+
+        .qr-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+        }
+
+        .qr-subtitle {
+            margin-top: 6px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .qr-box {
+            margin: 22px 0 18px;
+            border-radius: 28px;
+            padding: 18px;
+            background: white;
+            min-height: 290px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-box img {
+            width: 240px;
+            height: 240px;
+            image-rendering: pixelated;
+        }
+
+        .qr-placeholder {
+            text-align: center;
+            color: #64748b;
+            max-width: 220px;
+        }
+
+        .qr-placeholder i {
+            font-size: 2.4rem;
+            display: block;
+            margin-bottom: 10px;
+            color: #94a3b8;
+        }
+
+        .info-stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .info-card {
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .info-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #86efac;
+            font-weight: 700;
+            margin-bottom: 7px;
+        }
+
+        .info-text {
+            font-size: 0.92rem;
+            color: #e5e7eb;
+            line-height: 1.55;
+        }
+
+        .consent-box {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(249, 115, 22, 0.08);
+            border: 1px solid rgba(249, 115, 22, 0.18);
+            color: #fed7aa;
+            font-size: 0.84rem;
+            line-height: 1.55;
+        }
+
+        .consent-box i {
+            color: var(--orange);
+            font-size: 1.1rem;
+            margin-top: 1px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .ghost-btn {
+            flex: 1 1 220px;
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+        }
+
+        .ghost-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .poster-panel h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .poster-panel p {
+            color: var(--text-muted);
+            font-size: 0.87rem;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        #posterCanvas {
+            width: 100%;
+            border-radius: 22px;
+            border: 1px solid var(--border);
+            background: #08110c;
+        }
+
+        @media (max-width: 1024px) {
+            .hero,
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 18px 14px 32px;
+            }
+
+            .form-panel,
+            .preview-panel {
+                padding: 22px;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div class="brand">
+                <div class="brand-mark"><i class="ri-qr-code-line"></i></div>
+                <div>
+                    <div class="brand-title">QR Code do Atacaforte</div>
+                    <div class="brand-subtitle">Ferramenta interna para gerar QR e cartaz de feedback</div>
+                </div>
+            </div>
+            <a class="back-link" href="/"><i class="ri-arrow-left-line"></i> Voltar ao painel</a>
+        </div>
+
+        <div class="hero">
+            <section class="panel form-panel">
+                <div class="eyebrow"><i class="ri-store-2-line"></i> Atacaforte</div>
+                <h1 class="form-title">Monte o <span>QR Code</span> que vai para loja, caixa ou campanha.</h1>
+                <p class="form-subtitle">
+                    O QR abre direto no WhatsApp do Seu Pipico, com mensagem inicial pronta e cartaz para impressão.
+                </p>
+
+                <div class="field">
+                    <label for="unitName">Unidade ou campanha</label>
+                    <input id="unitName" type="text" placeholder="Opcional">
+                    <div class="field-hint">Se deixar vazio, o material sai apenas com o nome Atacaforte.</div>
+                </div>
+
+                <div class="field">
+                    <label for="whatsappNumber">Número do WhatsApp</label>
+                    <input id="whatsappNumber" type="text" placeholder="5511999999999">
+                    <div class="field-hint">Use no padrão com DDI, sem espaços. Ex.: 5511999999999.</div>
+                </div>
+
+                <div class="field">
+                    <label for="autoMessage">Mensagem inicial</label>
+                    <textarea id="autoMessage">Oi! Vim pelo QR Code do Atacaforte e quero deixar meu feedback. Estou ciente do uso das minhas informações para atendimento e melhoria da experiência.</textarea>
+                    <div class="field-hint">Essa é a mensagem que já abre no WhatsApp quando o cliente escaneia.</div>
+                </div>
+
+                <div class="field">
+                    <label>Cor do cartaz</label>
+                    <div class="theme-row">
+                        <button type="button" class="theme-dot active" style="background:#16a34a" data-color="#16a34a"></button>
+                        <button type="button" class="theme-dot" style="background:#15803d" data-color="#15803d"></button>
+                        <button type="button" class="theme-dot" style="background:#22c55e" data-color="#22c55e"></button>
+                        <button type="button" class="theme-dot" style="background:#f97316" data-color="#f97316"></button>
+                        <button type="button" class="theme-dot" style="background:#0ea5e9" data-color="#0ea5e9"></button>
+                    </div>
+                </div>
+
+                <button class="primary-btn" type="button" onclick="generateQR()">
+                    <i class="ri-magic-line"></i> Gerar QR Code e cartaz
+                </button>
+            </section>
+
+            <section class="panel preview-panel">
+                <div class="preview-grid">
+                    <div class="qr-card">
+                        <div class="logo-shell">
+                            <div class="logo-badge">
+                                <img id="marketLogo" src="/static/atacaforte-logo.png" alt="Atacaforte"
+                                    onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+                                <div class="logo-fallback" id="logoFallback">
+                                    <strong>AtacaForte</strong>
+                                    <span>mercado</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="qr-title" id="previewTitle">Atacaforte</div>
+                                <div class="qr-subtitle">Escaneie e fale com o Seu Pipico para registrar sugestões,
+                                    elogios e reclamações.</div>
+                            </div>
+                        </div>
+
+                        <div class="qr-box" id="qrcodeContainer">
+                            <div class="qr-placeholder">
+                                <i class="ri-qr-code-line"></i>
+                                Preencha os campos e gere o material do Atacaforte.
+                            </div>
+                        </div>
+
+                        <div class="info-stack">
+                            <div class="info-card">
+                                <div class="info-label">Mensagem inicial</div>
+                                <div class="info-text" id="previewMessage">Oi! Vim pelo QR Code do Atacaforte e quero
+                                    deixar meu feedback. Estou ciente do uso das minhas informações para atendimento e
+                                    melhoria da experiência.</div>
+                            </div>
+
+                            <div class="consent-box">
+                                <i class="ri-information-line"></i>
+                                <div id="consentPreview">
+                                    Ao enviar mensagem, o cliente concorda com o uso das informações para atendimento,
+                                    análise de feedbacks e melhoria da experiência no Atacaforte.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="poster-panel">
+                        <h3>Preview do cartaz</h3>
+                        <p>O arquivo já sai pronto para impressão em loja, padaria, hortifruti, açougue ou caixas.</p>
+                        <canvas id="posterCanvas" width="900" height="1400"></canvas>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="ghost-btn" type="button" id="downloadQrBtn" onclick="downloadQR()" disabled>
+                        <i class="ri-download-line"></i> Baixar QR Code
+                    </button>
+                    <button class="ghost-btn" type="button" id="downloadPosterBtn" onclick="downloadPoster()" disabled>
+                        <i class="ri-image-line"></i> Baixar cartaz
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const MARKET_NAME = 'Atacaforte';
+        const CONSENT_TEXT = 'Ao enviar mensagem, o cliente concorda com o uso das informações para atendimento, análise de feedbacks e melhoria da experiência no Atacaforte.';
+        const DEFAULT_WHATSAPP_MESSAGE = 'Oi! Vim pelo QR Code do Atacaforte e quero deixar meu feedback. Estou ciente do uso das minhas informações para atendimento e melhoria da experiência.';
+        const LOGO_URL = '/static/atacaforte-logo.png';
+
+        let selectedColor = '#16a34a';
+        let qrDataUrl = null;
+        let posterReady = false;
+
+        document.querySelectorAll('.theme-dot').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.theme-dot').forEach((item) => item.classList.remove('active'));
+                button.classList.add('active');
+                selectedColor = button.dataset.color;
+            });
+        });
+
+        document.getElementById('unitName').addEventListener('input', syncPreview);
+        document.getElementById('autoMessage').addEventListener('input', syncPreview);
+
+        function syncPreview() {
+            const unitName = document.getElementById('unitName').value.trim();
+            const message = document.getElementById('autoMessage').value.trim() || DEFAULT_WHATSAPP_MESSAGE;
+            document.getElementById('previewTitle').textContent = unitName || MARKET_NAME;
+            document.getElementById('previewMessage').textContent = message;
+            document.getElementById('consentPreview').textContent = CONSENT_TEXT;
+        }
+
+        function getWhatsappUrl() {
+            const phone = document.getElementById('whatsappNumber').value.replace(/\D/g, '');
+            const message = document.getElementById('autoMessage').value.trim();
+            if (!phone) {
+                alert('Informe o número do WhatsApp.');
+                return null;
+            }
+            return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        }
+
+        function renderQrToDataUrl(qr) {
+            const moduleCount = qr.getModuleCount();
+            const quietZone = 4;
+            const cellSize = 12;
+            const canvasSize = (moduleCount + quietZone * 2) * cellSize;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#000000';
+            for (let row = 0; row < moduleCount; row += 1) {
+                for (let col = 0; col < moduleCount; col += 1) {
+                    if (!qr.isDark(row, col)) continue;
+                    ctx.fillRect(
+                        (col + quietZone) * cellSize,
+                        (row + quietZone) * cellSize,
+                        cellSize,
+                        cellSize
+                    );
+                }
+            }
+
+            return canvas.toDataURL('image/png');
+        }
+
+        function generateQR() {
+            syncPreview();
+            const waUrl = getWhatsappUrl();
+            if (!waUrl) return;
+
+            const qr = qrcode(0, 'M');
+            qr.addData(waUrl);
+            qr.make();
+
+            qrDataUrl = renderQrToDataUrl(qr);
+            const container = document.getElementById('qrcodeContainer');
+            container.innerHTML = '';
+
+            const img = document.createElement('img');
+            img.src = qrDataUrl;
+            img.alt = 'QR Code do Atacaforte';
+            container.appendChild(img);
+
+            document.getElementById('downloadQrBtn').disabled = false;
+            document.getElementById('downloadPosterBtn').disabled = false;
+            generatePoster();
+        }
+
+        function downloadQR() {
+            if (!qrDataUrl) return;
+            const unitSlug = (document.getElementById('unitName').value || 'atacaforte')
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+            const link = document.createElement('a');
+            link.href = qrDataUrl;
+            link.download = `qrcode-${unitSlug}.png`;
+            link.click();
+        }
+
+        function downloadPoster() {
+            if (!posterReady) return;
+            const unitSlug = (document.getElementById('unitName').value || 'atacaforte')
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9-]/g, '');
+            const canvas = document.getElementById('posterCanvas');
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = `cartaz-${unitSlug}.png`;
+            link.click();
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        async function generatePoster() {
+            if (!qrDataUrl) return;
+
+            const canvas = document.getElementById('posterCanvas');
+            const ctx = canvas.getContext('2d');
+            const unitName = document.getElementById('unitName').value.trim();
+            const message = document.getElementById('autoMessage').value.trim() || DEFAULT_WHATSAPP_MESSAGE;
+
+            canvas.width = 900;
+            canvas.height = 1400;
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#07140c');
+            gradient.addColorStop(0.45, '#0b1810');
+            gradient.addColorStop(1, '#101912');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const glow = ctx.createRadialGradient(740, 120, 0, 740, 120, 260);
+            glow.addColorStop(0, `${selectedColor}44`);
+            glow.addColorStop(1, 'transparent');
+            ctx.fillStyle = glow;
+            ctx.fillRect(420, 0, 480, 420);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            drawRoundedRect(ctx, 58, 52, 230, 44, 22);
+            ctx.fill();
+            ctx.fillStyle = '#86efac';
+            ctx.font = '700 20px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('FEEDBACK PELO WHATSAPP', 173, 80);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '900 64px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(MARKET_NAME, 450, 180);
+
+            let subtitleY = 250;
+            if (unitName) {
+                ctx.fillStyle = '#d1d5db';
+                ctx.font = '500 30px Inter';
+                ctx.fillText(unitName, 450, 226);
+                subtitleY = 280;
+            }
+
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '400 25px Inter';
+            ctx.fillText('Escaneie o QR Code e fale com o Seu Pipico', 450, subtitleY);
+
+            drawRoundedRect(ctx, 185, 330, 530, 530, 36);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            const qrImage = await loadImage(qrDataUrl);
+            ctx.drawImage(qrImage, 240, 385, 420, 420);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(450, 595, 62, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fillStyle = '#0d1711';
+            ctx.fill();
+            ctx.restore();
+
+            try {
+                const logo = await loadImage(LOGO_URL);
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(450, 595, 54, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(logo, 396, 541, 108, 108);
+                ctx.restore();
+                ctx.beginPath();
+                ctx.arc(450, 595, 58, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+                ctx.lineWidth = 6;
+                ctx.stroke();
+            } catch (error) {
+                ctx.beginPath();
+                ctx.arc(450, 595, 54, 0, Math.PI * 2);
+                ctx.fillStyle = '#11823a';
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 25px Inter';
+                ctx.fillText('AF', 450, 605);
+            }
+
+            drawRoundedRect(ctx, 92, 904, 716, 116, 28);
+            ctx.fillStyle = 'rgba(255,255,255,0.04)';
+            ctx.fill();
+            ctx.fillStyle = '#86efac';
+            ctx.font = '700 18px Inter';
+            ctx.textAlign = 'left';
+            ctx.fillText('MENSAGEM INICIAL', 122, 944);
+
+            ctx.fillStyle = '#f3f4f6';
+            ctx.font = '500 26px Inter';
+            wrapText(ctx, message, 122, 984, 656, 34);
+
+            drawRoundedRect(ctx, 92, 1060, 716, 138, 28);
+            ctx.fillStyle = 'rgba(249,115,22,0.08)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(249,115,22,0.16)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#fdba74';
+            ctx.font = '700 18px Inter';
+            ctx.fillText('AVISO AO CLIENTE', 122, 1100);
+            ctx.fillStyle = '#ffedd5';
+            ctx.font = '500 22px Inter';
+            wrapText(ctx, CONSENT_TEXT, 122, 1140, 646, 30);
+
+            ctx.fillStyle = selectedColor;
+            ctx.font = '700 20px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('Node Data • Feedback inteligente para supermercados', 450, 1300);
+
+            posterReady = true;
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = text.split(' ');
+            let line = '';
+            let currentY = y;
+            for (let i = 0; i < words.length; i += 1) {
+                const testLine = `${line}${words[i]} `;
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && i > 0) {
+                    ctx.fillText(line.trim(), x, currentY);
+                    line = `${words[i]} `;
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            if (line.trim()) ctx.fillText(line.trim(), x, currentY);
+        }
+
+        syncPreview();
+    </script>
+</body>
+
+</html>

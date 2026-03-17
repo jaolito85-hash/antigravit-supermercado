@@ -1,0 +1,2823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Data | Supermercados</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-body: #050507;
+            --bg-sidebar: #0b0c10;
+            --bg-card: #111217;
+            --bg-hover: #1c1e26;
+            --accent-primary: #059669;
+            --text-main: #ffffff;
+            --text-muted: #8b949e;
+            --border: #23252e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+
+        .logo i {
+            color: var(--accent-primary);
+            font-size: 1.2rem;
+        }
+
+        .nav-label {
+            font-size: 0.7rem;
+            color: #555963;
+            text-transform: uppercase;
+            margin: 20px 0 10px 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .nav-item i {
+            font-size: 1.1rem;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .page-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .page-title p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .stat-sub {
+            font-size: 0.75rem;
+            color: #22c55e;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        /* Dashboard Layout */
+        .dash-row {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 24px;
+            flex: 1;
+        }
+
+        .chart-box {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-header {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .chart-container-bar {
+            flex: 1;
+            position: relative;
+            min-height: 250px;
+        }
+
+        .chart-container-donut {
+            position: relative;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Feedbacks List */
+        .feed-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .feedback-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: 0.2s;
+        }
+
+        .feedback-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .fb-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .fb-tag {
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #1f2937;
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .fb-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .fb-msg {
+            font-size: 0.92rem;
+            line-height: 1.5;
+            color: #d1d5db;
+            margin-bottom: 12px;
+            min-height: 36px;
+            /* Truncate long text to 3 lines */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            line-clamp: 3;
+            overflow: hidden;
+        }
+
+        .fb-footer {
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .priority-dot {
+            height: 8px;
+            width: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        /* Update badge on compact card */
+        .update-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: #059669, 20;
+            background: rgba(5, 150, 105, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            border-radius: 20px;
+            padding: 3px 8px;
+            margin-top: 8px;
+        }
+
+        /* Linked cards badge */
+        .linked-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(129, 140, 248, 0.35);
+            border-radius: 20px;
+            padding: 3px 8px;
+            margin-top: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .linked-badge:hover {
+            background: rgba(99, 102, 241, 0.3);
+            transform: scale(1.05);
+        }
+
+        .conversation-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .conversation-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            background: rgba(5, 150, 105, 0.16);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.35);
+            border-radius: 20px;
+            padding: 3px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .conversation-badge:hover {
+            background: rgba(5, 150, 105, 0.28);
+            transform: scale(1.05);
+        }
+
+        .takeover-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: rgba(249, 115, 22, 0.16);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            border-radius: 999px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+
+        .takeover-badge:hover {
+            background: rgba(249, 115, 22, 0.28);
+            transform: scale(1.05);
+        }
+
+        .takeover-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #fb923c;
+            background: rgba(249, 115, 22, 0.14);
+            border: 1px solid rgba(249, 115, 22, 0.35);
+            border-radius: 999px;
+            padding: 5px 10px;
+        }
+
+        /* Clickable card cursor */
+        .feedback-card.clickable {
+            cursor: pointer;
+        }
+
+        .feedback-card.clickable:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 24px rgba(5, 150, 105, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Thread Modal */
+        .modal-thread-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 94%;
+            max-width: 640px;
+            max-height: 88vh;
+            overflow-y: auto;
+            padding: 28px;
+            animation: slideIn 0.25s ease-out;
+            position: relative;
+        }
+
+        .thread-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
+        .thread-sender {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .thread-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .thread-item {
+            display: flex;
+            width: 100%;
+        }
+
+        .thread-item.client {
+            justify-content: flex-start;
+        }
+
+        .thread-item.agent {
+            justify-content: flex-end;
+        }
+
+        .thread-item.human {
+            justify-content: flex-end;
+        }
+
+        .chat-bubble {
+            width: min(84%, 420px);
+            border-radius: 18px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .thread-item.client .chat-bubble {
+            background: #111827;
+            border-color: rgba(75, 85, 99, 0.55);
+            border-bottom-left-radius: 6px;
+        }
+
+        .thread-item.agent .chat-bubble {
+            background: linear-gradient(135deg, rgba(5, 150, 105, 0.22), rgba(6, 95, 70, 0.3));
+            border-color: rgba(52, 211, 153, 0.3);
+            border-bottom-right-radius: 6px;
+        }
+
+        .thread-item.human .chat-bubble {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.24), rgba(154, 52, 18, 0.28));
+            border-color: rgba(251, 146, 60, 0.35);
+            border-bottom-right-radius: 6px;
+        }
+
+        .chat-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .chat-role {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .thread-item.client .chat-role {
+            color: #cbd5e1;
+        }
+
+        .thread-item.agent .chat-role {
+            color: #6ee7b7;
+        }
+
+        .thread-item.human .chat-role {
+            color: #fdba74;
+        }
+
+        .chat-time {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .chat-text {
+            font-size: 0.9rem;
+            color: #d1d5db;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .thread-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding-top: 16px;
+            margin-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* WhatsApp Button */
+        .whatsapp-contact-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #25D36620;
+            color: #25D366;
+            border: 1px solid #25D366;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .whatsapp-contact-btn:hover {
+            background: #25D366;
+            color: #fff;
+            transform: scale(1.1);
+            box-shadow: 0 0 12px #25D36650;
+        }
+
+        .thread-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Manage Grid */
+        .grid-manage {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .manage-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .manage-card h3 {
+            font-size: 1rem;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .manage-card h2 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .manage-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .btn-delete {
+            color: #ef4444;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+        }
+
+        .btn-add {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .promotions-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .promo-panel {
+            background: linear-gradient(180deg, rgba(17, 18, 23, 0.98), rgba(11, 12, 16, 0.96));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .promo-panel::before {
+            content: "";
+            position: absolute;
+            inset: -20% auto auto 65%;
+            width: 220px;
+            height: 220px;
+            background: radial-gradient(circle, rgba(5, 150, 105, 0.22), transparent 70%);
+            pointer-events: none;
+        }
+
+        .promo-hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 22px;
+        }
+
+        .promo-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #86efac;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .promo-hero h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .promo-hero p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 620px;
+            font-size: 0.92rem;
+        }
+
+        .promo-save-btn {
+            background: linear-gradient(135deg, #059669, #16a34a);
+            border: none;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 14px 32px rgba(5, 150, 105, 0.2);
+        }
+
+        .promo-save-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        .promo-save-status {
+            min-height: 22px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: #86efac;
+        }
+
+        .promo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .promo-editor {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .promo-editor-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .promo-editor-title {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .promo-editor-title i {
+            color: #34d399;
+        }
+
+        .promo-editor-caption {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            margin-bottom: 14px;
+        }
+
+        .promo-textarea {
+            width: 100%;
+            min-height: 220px;
+            resize: vertical;
+            background: #0c0e13;
+            border: 1px solid #1f2430;
+            color: var(--text-main);
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 0.93rem;
+            line-height: 1.6;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .promo-textarea:focus {
+            border-color: rgba(16, 185, 129, 0.7);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+        }
+
+        .promo-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-top: 10px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        .promo-side {
+            display: grid;
+            gap: 18px;
+        }
+
+        .promo-preview-card,
+        .promo-guide-card {
+            background: linear-gradient(180deg, rgba(17, 18, 23, 0.98), rgba(10, 12, 17, 0.98));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+        }
+
+        .promo-preview-card h3,
+        .promo-guide-card h3 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .promo-preview-card p,
+        .promo-guide-card p {
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            line-height: 1.6;
+        }
+
+        .promo-preview-stack {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .promo-preview-bubble {
+            border-radius: 16px;
+            padding: 16px 18px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+        }
+
+        .promo-preview-bubble.owner {
+            background: rgba(59, 130, 246, 0.14);
+            border: 1px solid rgba(59, 130, 246, 0.28);
+            color: #dbeafe;
+        }
+
+        .promo-preview-bubble.agent {
+            background: rgba(5, 150, 105, 0.14);
+            border: 1px solid rgba(5, 150, 105, 0.25);
+            color: #ecfdf5;
+        }
+
+        .promo-preview-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .promo-guide-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .promo-guide-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .promo-guide-item i {
+            color: #34d399;
+            margin-top: 2px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Recovery Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 32px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .recovery-textarea {
+            width: 100%;
+            min-height: 140px;
+            background: var(--bg-body);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 16px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .recovery-textarea:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .recipient-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-body);
+        }
+
+        .recipient-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            transition: 0.15s;
+        }
+
+        .recipient-item:last-child {
+            border-bottom: none;
+        }
+
+        .recipient-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .recipient-item input[type='checkbox'] {
+            accent-color: var(--accent-primary);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .recipient-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .recipient-phone {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .recipient-send-btn {
+            background: #25D36620;
+            color: #25D366;
+            border: 1px solid #25D366;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .recipient-send-btn:hover {
+            background: #25D366;
+            color: white;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-modal {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+            border: none;
+        }
+
+        .btn-modal-primary {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-modal-primary:hover {
+            background: #1da851;
+        }
+
+        .btn-modal-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-modal-secondary:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-main);
+        }
+
+        .btn-modal-regen {
+            background: transparent;
+            border: 1px solid #a855f7;
+            color: #a855f7;
+        }
+
+        .btn-modal-regen:hover {
+            background: #a855f720;
+        }
+
+        .btn-recovery {
+            background: #25D36620;
+            color: #25D366;
+            border: 1px solid #25D366;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .btn-recovery:hover {
+            background: #25D366;
+            color: white;
+            box-shadow: 0 0 16px #25D36640;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #22c55e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            z-index: 99999;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .text-red {
+            color: #ef4444;
+        }
+
+        /* Filters Bar */
+        .filters-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-select {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            min-width: 150px;
+        }
+
+        .filter-select:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .filter-count {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-left: auto;
+        }
+
+        .btn-clear-filters {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-clear-filters:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* Export */
+        .export-dropdown {
+            position: relative;
+        }
+
+        .export-btn {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .export-btn:hover {
+            background: #047857;
+        }
+
+        .export-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            margin-top: 6px;
+            z-index: 100;
+            min-width: 150px;
+        }
+
+        .export-menu a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            color: var(--text-main);
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .export-menu a:hover {
+            background: var(--bg-hover);
+        }
+
+        /* Critical Alert */
+        .alerta-critico {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(220, 38, 38, 0.4);
+            z-index: 9999;
+            max-width: 350px;
+            animation: slideIn 0.3s ease-out, pulse 2s infinite;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .alerta-critico strong {
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .alerta-critico p {
+            margin: 0 0 8px 0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .alerta-critico small {
+            opacity: 0.8;
+            font-size: 0.75rem;
+        }
+
+        .alerta-critico .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.7;
+        }
+
+        .alerta-critico .close-btn:hover {
+            opacity: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 8px 32px rgba(220, 38, 38, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 8px 48px rgba(220, 38, 38, 0.6);
+            }
+        }
+
+        /* Mobile */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1000;
+        }
+
+        .mobile-header .logo {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .burger-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 998;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                z-index: 999;
+                transition: left 0.3s ease;
+                width: 260px;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            body {
+                flex-direction: column;
+            }
+
+            .main {
+                padding: 80px 16px 16px 16px;
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .stat-card {
+                padding: 14px;
+                min-height: auto;
+            }
+
+            .stat-value {
+                font-size: 1.4rem;
+            }
+
+            .stat-label {
+                font-size: 0.7rem;
+            }
+
+            .dash-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .chart-box {
+                padding: 16px;
+            }
+
+            .chart-container-bar {
+                min-height: 180px;
+            }
+
+            .chart-box>div[style*="display: flex"] {
+                flex-direction: column !important;
+                align-items: center !important;
+            }
+
+            #donut-legend {
+                width: 100%;
+                margin-top: 16px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-title h1 {
+                font-size: 1.4rem;
+            }
+
+            .filters-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filters-bar select {
+                width: 100%;
+            }
+
+            .grid-manage {
+                grid-template-columns: 1fr;
+            }
+
+            .promotions-shell,
+            .promo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .promo-hero {
+                flex-direction: column;
+            }
+
+            #top-problems-list {
+                flex-direction: column !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-title h1 {
+                font-size: 1.2rem;
+            }
+
+            .main {
+                padding: 70px 12px 12px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <div class="logo"><i class="ri-store-2-fill"></i> Node Data</div>
+        <button class="burger-btn" onclick="toggleMobileMenu()"><i class="ri-menu-line" id="burger-icon"></i></button>
+    </div>
+    <div class="sidebar-overlay" onclick="toggleMobileMenu()"></div>
+
+    <div class="sidebar">
+        <div class="logo"><i class="ri-store-2-fill"></i> Node Data</div>
+        <div class="nav-label">SUPERMERCADO</div>
+        <div class="nav-item active" onclick="nav('dashboard', this)"><i class="ri-layout-grid-fill"></i> Painel</div>
+        <div class="nav-item" onclick="nav('feedbacks', this)"><i class="ri-chat-3-line"></i> Feedbacks</div>
+        <div class="nav-item" onclick="nav('lojas', this)"><i class="ri-store-line"></i> Lojas</div>
+        <div class="nav-item" onclick="nav('categories', this)"><i class="ri-price-tag-3-line"></i> Categorias</div>
+        <div class="nav-item" onclick="nav('promotions', this)"><i class="ri-megaphone-line"></i> Promoções</div>
+        <div class="nav-item" onclick="window.location.href='/qrcode'"><i class="ri-qr-code-line"></i> QR Code</div>
+        <div class="nav-label">PREMIUM</div>
+        <div class="nav-item" onclick="nav('intel', this)"><i class="ri-spy-line"></i> Inteligência</div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div class="main" id="view-dashboard">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Painel de Controle</h1>
+                <p>Visão geral dos supermercados em tempo real</p>
+            </div>
+            <div class="export-dropdown">
+                <button class="export-btn" onclick="toggleExportMenu('dashboard')">
+                    <i class="ri-download-2-line"></i> Exportar <i class="ri-arrow-down-s-line"></i>
+                </button>
+                <div id="export-menu-dashboard" class="export-menu hidden">
+                    <a href="/api/export/csv" download><i class="ri-file-excel-2-line" style="color:#10b981"></i>
+                        Exportar CSV</a>
+                    <a href="/api/export/json" download><i class="ri-code-s-slash-line" style="color:#3b82f6"></i>
+                        Exportar JSON</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" id="ai-pulse-card" style="border-left: 3px solid var(--accent-primary);">
+                <div class="stat-label">AI Market Pulse <i class="ri-sparkling-2-fill" style="color:#a855f7"></i></div>
+                <div id="ai-pulse-summary"
+                    style="font-size: 0.85rem; line-height: 1.5; color: #d1d5db; min-height: 40px;">Carregando
+                    análise...</div>
+                <div class="stat-sub" id="ai-pulse-updated" style="margin-top: 8px;">Atualizado: --</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Feedbacks Hoje <i class="ri-pulse-line" style="color:#22c55e"></i></div>
+                <div class="stat-value" id="kpi-today">0</div>
+                <div class="stat-sub">Novos registros</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Setor Mais Ativo <i class="ri-map-pin-2-line text-red"></i></div>
+                <div class="stat-value" id="kpi-region" style="font-size: 1.4rem">--</div>
+                <div class="stat-sub" id="kpi-region-count">0 feedbacks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Principal Categoria <i class="ri-price-tag-3-line" style="color:#f59e0b"></i>
+                </div>
+                <div class="stat-value" id="kpi-cat" style="font-size: 1.4rem">--</div>
+                <div class="stat-sub" id="kpi-cat-count">0 feedbacks</div>
+            </div>
+        </div>
+
+        <!-- ROW 1: Timeline + Sentimentos -->
+        <div class="dash-row">
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-line-chart-line" style="color:#059669"></i> Feedbacks por Hora
+                </div>
+                <div class="chart-container-bar"><canvas id="timelineChart"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-emotion-line" style="color:#a855f7"></i> Sentimentos</div>
+                <div id="sentiment-bars" style="padding: 20px 0;"></div>
+            </div>
+        </div>
+
+        <!-- ROW 2: Donut + Top Elogios -->
+        <div class="dash-row" style="margin-top: 24px;">
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-pie-chart-2-fill" style="color:#f59e0b"></i> Categorias</div>
+                <div style="display: flex; align-items: center; gap: 30px; padding: 10px 0;">
+                    <div style="position: relative; width: 180px; height: 180px;">
+                        <canvas id="donutChart"></canvas>
+                        <div id="donut-center"
+                            style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                            <div style="font-size: 2rem; font-weight: 700; color: white;" id="donut-total">0</div>
+                            <div style="font-size: 0.75rem; color: #9ca3af;">feedbacks</div>
+                        </div>
+                    </div>
+                    <div id="donut-legend" style="flex: 1; font-size: 0.85rem;"></div>
+                </div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header" style="color:#22c55e"><i class="ri-star-fill"></i> Top 3 Elogios</div>
+                <div id="top-compliments-list" style="font-size: 0.9rem; color: #d1d5db;">
+                    <p style="color:var(--text-muted)">Aguardando dados...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROW 3: Top Problemas -->
+        <div class="dash-row" style="margin-top: 24px;">
+            <div class="chart-box" style="grid-column: span 2;">
+                <div class="chart-header" style="color:#ef4444"><i class="ri-alert-fill"></i> Top 3 Problemas</div>
+                <div id="top-problems-list"
+                    style="font-size: 0.9rem; color: #d1d5db; display: flex; gap: 20px; flex-wrap: wrap;">
+                    <p style="color:var(--text-muted)">Aguardando dados...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEEDBACKS VIEW -->
+    <div class="main hidden" id="view-feedbacks">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Feedbacks</h1>
+                <p>Gerencie e analise os feedbacks dos clientes</p>
+            </div>
+            <div class="export-dropdown">
+                <button class="export-btn" onclick="toggleExportMenu('feedbacks')">
+                    <i class="ri-download-2-line"></i> Exportar <i class="ri-arrow-down-s-line"></i>
+                </button>
+                <div id="export-menu-feedbacks" class="export-menu hidden">
+                    <a href="/api/export/csv" download><i class="ri-file-excel-2-line" style="color:#10b981"></i>
+                        Exportar CSV</a>
+                    <a href="/api/export/json" download><i class="ri-code-s-slash-line" style="color:#3b82f6"></i>
+                        Exportar JSON</a>
+                </div>
+            </div>
+        </div>
+        <div class="filters-bar">
+            <select id="filtro-categoria" class="filter-select" onchange="aplicarFiltros()">
+                <option value="">Todas Categorias</option>
+            </select>
+            <select id="filtro-prioridade" class="filter-select" onchange="aplicarFiltros()">
+                <option value="">Todas Prioridades</option>
+                <option value="Critico">Crítico</option>
+                <option value="Urgente">Urgente</option>
+                <option value="Positivo">Positivo</option>
+                <option value="Neutro">Neutro</option>
+            </select>
+            <select id="filtro-status" class="filter-select" onchange="aplicarFiltros()">
+                <option value="ativos" selected>Cards Ativos</option>
+                <option value="aberto">Aberto</option>
+                <option value="em_andamento">Em Andamento</option>
+                <option value="resolvido">Resolvido</option>
+            </select>
+            <button class="btn-clear-filters" onclick="limparFiltros()"><i class="ri-filter-off-line"></i>
+                Limpar</button>
+            <span class="filter-count" id="filter-count">Carregando...</span>
+            <button class="btn-recovery hidden" id="btn-recovery" onclick="openRecoveryModal()">
+                <i class="ri-send-plane-fill"></i> Recuperar Clientes
+            </button>
+        </div>
+        <div class="feed-list" id="feed-list-container"></div>
+    </div>
+
+    <!-- RECOVERY MODAL -->
+    <div class="modal-overlay" id="recovery-modal" style="display:none"
+        onclick="if(event.target===this) closeRecoveryModal()">
+        <div class="modal-box">
+            <div class="modal-title">
+                <i class="ri-heart-pulse-fill" style="color:#25D366"></i> Recuperar Clientes
+            </div>
+            <div class="modal-subtitle" id="recovery-subtitle">Envie uma mensagem personalizada para os clientes que
+                reclamaram</div>
+
+            <div class="modal-section">
+                <div class="modal-section-title"><i class="ri-quill-pen-line"></i> Mensagem (gerada por IA)</div>
+                <textarea class="recovery-textarea" id="recovery-message" placeholder="Gerando mensagem..."></textarea>
+                <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+                    <span style="font-size:0.75rem; color:var(--text-muted)" id="recovery-char-count">0
+                        caracteres</span>
+                    <button class="btn-modal btn-modal-regen" onclick="regenerateMessage()" id="btn-regen">
+                        <i class="ri-sparkling-2-fill"></i> Gerar Nova
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div class="modal-section-title" style="margin-bottom:0"><i class="ri-group-line"></i> Destinatários
+                        (<span id="selected-count">0</span>)</div>
+                    <label
+                        style="font-size:0.8rem; color:var(--text-muted); cursor:pointer; display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="select-all-recipients" checked
+                            onchange="toggleAllRecipients(this.checked)"
+                            style="accent-color:var(--accent-primary); width:14px; height:14px;"> Selecionar todos
+                    </label>
+                </div>
+                <div class="recipient-list" id="recipient-list"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-secondary" onclick="closeRecoveryModal()">
+                    <i class="ri-close-line"></i> Fechar
+                </button>
+                <button class="btn-modal btn-modal-primary" onclick="copyAllMessages()">
+                    <i class="ri-file-copy-line"></i> Copiar Mensagem
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOJAS VIEW -->
+    <div class="main hidden" id="view-lojas">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Lojas</h1>
+                <p>Gerencie as unidades do supermercado</p>
+            </div>
+            <button class="btn-add" onclick="addItem('regions')"><i class="ri-add-line"></i> Adicionar</button>
+        </div>
+        <div class="grid-manage" id="regions-grid"></div>
+    </div>
+
+    <!-- CATEGORIES VIEW -->
+    <div class="main hidden" id="view-categories">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Categorias</h1>
+                <p>Classificação automática da IA</p>
+            </div>
+            <button class="btn-add" onclick="addItem('categories')"><i class="ri-add-line"></i> Adicionar</button>
+        </div>
+        <div class="grid-manage" id="categories-grid"></div>
+    </div>
+
+    <!-- PROMOTIONS VIEW -->
+    <div class="main hidden" id="view-promotions">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Promoções</h1>
+                <p>Atualize as ofertas do dia e da semana para o Seu Pipico responder na hora</p>
+            </div>
+        </div>
+
+        <div class="promotions-shell">
+            <section class="promo-panel">
+                <div class="promo-hero">
+                    <div>
+                        <div class="promo-kicker"><i class="ri-flashlight-line"></i> Operação comercial</div>
+                        <h2>O Atacaforte edita aqui. O Seu Pipico já usa na próxima conversa.</h2>
+                        <p>
+                            Preencha as promoções do dia e da semana do jeito que o mercado prefere divulgar. Assim
+                            que salvar, o atendimento no WhatsApp passa a responder com esse texto sem depender de
+                            deploy ou alteração em `.env`.
+                        </p>
+                    </div>
+                    <div>
+                        <button class="promo-save-btn" id="save-promotions-btn" onclick="savePromotions()">
+                            <i class="ri-save-3-line"></i> Salvar promoções
+                        </button>
+                        <div class="promo-save-status" id="promo-save-status"></div>
+                    </div>
+                </div>
+
+                <div class="promo-grid">
+                    <div class="promo-editor">
+                        <div class="promo-editor-header">
+                            <div class="promo-editor-title"><i class="ri-sun-line"></i> Promoções de hoje</div>
+                        </div>
+                        <div class="promo-editor-caption">
+                            Use para ofertas-relâmpago, açougue do dia, padaria, hortifruti ou condição válida só hoje.
+                        </div>
+                        <textarea id="promotions-day" class="promo-textarea"
+                            placeholder="Ex.: Banana prata R$ 3,99/kg&#10;Leite integral R$ 4,89&#10;Pão francês R$ 12,90/kg"></textarea>
+                        <div class="promo-meta">
+                            <span>Seu Pipico prioriza esse bloco quando perguntarem de promoção de hoje.</span>
+                            <span id="promotions-day-count">0 caracteres</span>
+                        </div>
+                    </div>
+
+                    <div class="promo-editor">
+                        <div class="promo-editor-header">
+                            <div class="promo-editor-title"><i class="ri-calendar-event-line"></i> Promoções da semana</div>
+                        </div>
+                        <div class="promo-editor-caption">
+                            Use para encarte, campanha semanal ou resumo principal que pode ficar valendo por vários dias.
+                        </div>
+                        <textarea id="promotions-week" class="promo-textarea"
+                            placeholder="Ex.: Café 500g R$ 13,99&#10;Arroz 5kg R$ 24,90&#10;Refrigerante 2L R$ 7,49"></textarea>
+                        <div class="promo-meta">
+                            <span>Se o campo do dia estiver vazio, o Seu Pipico usa esse conteúdo como resposta principal.</span>
+                            <span id="promotions-week-count">0 caracteres</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="promo-side">
+                <section class="promo-preview-card">
+                    <h3>Preview da conversa</h3>
+                    <p>Veja como a resposta sai no WhatsApp quando o cliente pergunta por promoções.</p>
+                    <div class="promo-preview-stack">
+                        <div class="promo-preview-bubble owner">
+                            <div class="promo-preview-label"><i class="ri-user-3-line"></i> Cliente</div>
+                            Quais promoções vocês estão com hoje?
+                        </div>
+                        <div class="promo-preview-bubble agent" id="promotions-preview-response">
+                            Ainda não recebi as promoções atualizadas. Se quiser, já deixo sua mensagem registrada para a equipe conferir.
+                        </div>
+                    </div>
+                </section>
+
+                <section class="promo-guide-card">
+                    <h3>Como preencher melhor</h3>
+                    <p>Quanto mais direto o texto, melhor a resposta no WhatsApp.</p>
+                    <div class="promo-guide-list">
+                        <div class="promo-guide-item">
+                            <i class="ri-check-line"></i>
+                            <div>Uma oferta por linha costuma ficar mais legível para o cliente e para o preview.</div>
+                        </div>
+                        <div class="promo-guide-item">
+                            <i class="ri-check-line"></i>
+                            <div>Se a promoção for só do dia, deixe o campo semanal como está e atualize apenas o do dia.</div>
+                        </div>
+                        <div class="promo-guide-item">
+                            <i class="ri-check-line"></i>
+                            <div>Se o mercado não quiser divulgar nada em um período, deixe o campo vazio e o Seu Pipico não inventa promoção.</div>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- INTELLIGENCE VIEW -->
+    <div class="main hidden" id="view-intel">
+        <div class="page-header">
+            <div class="page-title">
+                <h1><i class="ri-spy-line" style="color:#a855f7"></i> Inteligência Premium</h1>
+                <p>Análises avançadas e insights competitivos</p>
+            </div>
+        </div>
+
+        <!-- ROI -->
+        <div class="stats-grid" id="roi-grid">
+            <div class="stat-card" style="border-left: 3px solid #22c55e">
+                <div class="stat-label">Receita Retida (Mês) <i class="ri-money-dollar-circle-fill"
+                        style="color:#22c55e"></i></div>
+                <div class="stat-value" id="roi-saved" style="color:#22c55e">R$ 0</div>
+                <div class="stat-sub" id="roi-resolved">0 clientes retidos</div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #ef4444">
+                <div class="stat-label">Receita em Risco (Mês) <i class="ri-error-warning-fill"
+                        style="color:#ef4444"></i></div>
+                <div class="stat-value" id="roi-risk" style="color:#ef4444">R$ 0</div>
+                <div class="stat-sub" id="roi-open">0 clientes em risco</div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #3b82f6">
+                <div class="stat-label">Taxa de Resolução <i class="ri-checkbox-circle-fill" style="color:#3b82f6"></i>
+                </div>
+                <div class="stat-value" id="roi-rate" style="color:#3b82f6">0%</div>
+                <div class="stat-sub" id="roi-time">Tempo médio: --</div>
+            </div>
+            <div class="stat-card" style="border-left: 3px solid #f59e0b">
+                <div class="stat-label">Projeção Anual <i class="ri-line-chart-fill" style="color:#f59e0b"></i></div>
+                <div class="stat-value" id="roi-annual" style="color:#f59e0b; font-size:1.4rem">R$ 0</div>
+                <div class="stat-sub">Receita protegida estimada</div>
+            </div>
+        </div>
+
+        <!-- Radar + Crisis -->
+        <div class="dash-row">
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-radar-line" style="color:#f59e0b"></i> Radar de Concorrência
+                </div>
+                <div id="competitors-list">
+                    <p style="color:var(--text-muted)">Analisando menções...</p>
+                </div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-alarm-warning-fill" style="color:#ef4444"></i> Alertas de Crise
+                    (48h)</div>
+                <div id="crisis-list">
+                    <p style="color:var(--text-muted)">Monitorando tendências...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical Hours + Churn -->
+        <div class="dash-row" style="margin-top: 24px;">
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-time-fill" style="color:#a855f7"></i> Horários Críticos</div>
+                <div id="critical-hours-list">
+                    <p style="color:var(--text-muted)">Calculando padrões...</p>
+                </div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-header"><i class="ri-user-unfollow-fill" style="color:#ef4444"></i> Detector de Êxodo
+                </div>
+                <div id="churn-list">
+                    <p style="color:var(--text-muted)">Rastreando clientes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentChartDonut = null;
+        let currentChartTimeline = null;
+
+        // Mobile Menu
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            const icon = document.getElementById('burger-icon');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+            icon.className = sidebar.classList.contains('active') ? 'ri-close-line' : 'ri-menu-line';
+        }
+
+        // Navigation
+        function nav(view, el) {
+            document.querySelectorAll('.main').forEach(d => d.classList.add('hidden'));
+            document.getElementById('view-' + view).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('active');
+                document.querySelector('.sidebar-overlay').classList.remove('active');
+                document.getElementById('burger-icon').className = 'ri-menu-line';
+            }
+            if (view === 'dashboard') loadData();
+            if (view === 'feedbacks') {
+                document.getElementById('filtro-status').value = 'ativos';
+                aplicarFiltros();
+            }
+            if (view === 'lojas' || view === 'categories') loadConfigViews();
+            if (view === 'promotions') loadPromotionsView();
+            if (view === 'intel') loadIntelligence();
+        }
+
+        // Time formatting
+        function formatarTempo(timestamp) {
+            if (!timestamp) return 'Desconhecido';
+            let data;
+            if (timestamp.indexOf('/') > -1) {
+                const [datePart, timePart] = timestamp.split(' ');
+                const [dia, mes, ano] = datePart.split('/');
+                const [hora, minuto] = timePart.split(':');
+                data = new Date(`20${ano}-${mes}-${dia}T${hora}:${minuto}:00`);
+            } else {
+                data = new Date(timestamp);
+            }
+            const agora = new Date();
+            const diffMin = Math.floor((agora - data) / 60000);
+            const diffHoras = Math.floor(diffMin / 60);
+            if (diffMin < 1) return 'Agora mesmo';
+            if (diffMin < 60) return `Há ${diffMin} min`;
+            if (diffHoras < 24) return `Há ${diffHoras}h`;
+            return data.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatMessage(msg) {
+            if (!msg) return '';
+            const parts = msg.split('[Atualização]:');
+            let html = `<span>${parts[0]}</span>`;
+            for (let i = 1; i < parts.length; i++) {
+                html += `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); display:flex; gap:8px;">
+                    <i class="ri-chat-history-line" style="color:var(--accent-primary); margin-top:2px;"></i>
+                    <div style="flex:1;">
+                        <span style="font-size:0.75rem; color:var(--accent-primary); font-weight:600; text-transform:uppercase;">Atualização</span>
+                        <div style="color:#d1d5db; font-size:0.95em;">${parts[i].trim()}</div>
+                    </div>
+                </div>`;
+            }
+            return html;
+        }
+
+        // Load Dashboard Data
+        async function loadData() {
+            const [evRes, cfgRes] = await Promise.all([fetch('/api/events'), fetch('/api/config')]);
+            const events = await evRes.json();
+            const config = await cfgRes.json();
+
+            document.getElementById('kpi-today').innerText = events.length;
+
+            const regCount = {};
+            events.forEach(e => { if (e.region && e.region !== 'N/A') regCount[e.region] = (regCount[e.region] || 0) + 1; });
+            const topReg = Object.keys(regCount).length ? Object.keys(regCount).reduce((a, b) => regCount[a] > regCount[b] ? a : b) : "Nenhum";
+            document.getElementById('kpi-region').innerText = topReg;
+            document.getElementById('kpi-region-count').innerText = (regCount[topReg] || 0) + " feedbacks";
+
+            const catCount = {};
+            events.forEach(e => catCount[e.category] = (catCount[e.category] || 0) + 1);
+            const topCat = Object.keys(catCount).length ? Object.keys(catCount).reduce((a, b) => catCount[a] > catCount[b] ? a : b) : "N/A";
+            document.getElementById('kpi-cat').innerText = topCat;
+            document.getElementById('kpi-cat-count').innerText = (catCount[topCat] || 0) + " feedbacks";
+
+            renderCharts(events, config.categories);
+            loadAiPulse();
+        }
+
+        async function loadAiPulse() {
+            try {
+                const res = await fetch('/api/ai-pulse');
+                const data = await res.json();
+                document.getElementById('ai-pulse-summary').innerText = data.summary || 'Sem análise disponível';
+                if (data.updated_at) {
+                    document.getElementById('ai-pulse-updated').innerText = `${data.feedbacks_count || 0} feedbacks • Atualizado: ${formatarTempo(data.updated_at)}`;
+                }
+                const statusColors = { 'good': '#22c55e', 'warning': '#f59e0b', 'critical': '#ef4444', 'waiting': '#6b7280', 'error': '#6b7280' };
+                document.getElementById('ai-pulse-card').style.borderLeftColor = statusColors[data.status] || '#a855f7';
+            } catch (e) {
+                document.getElementById('ai-pulse-summary').innerText = 'Erro ao carregar análise';
+            }
+        }
+
+        // Parse flat message string into thread array
+        function parseThread(rawMessage) {
+            if (!rawMessage) return [{ label: 'original', text: '', time: null }];
+            const parts = rawMessage.split(/\n\n\[Atualiza[çc][aã]o(?:\s+(\d{2}:\d{2}))?\]:\s*/i);
+            const result = [{ label: 'original', text: (parts[0] || '').trim(), time: null }];
+            // parts come as: [original, time1|undefined, text1, time2|undefined, text2, ...]
+            for (let i = 1; i < parts.length; i += 2) {
+                result.push({ label: 'update', text: (parts[i + 1] || '').trim(), time: parts[i] || null });
+            }
+            return result;
+        }
+
+        // Feedbacks — compact card view
+        let totalFeedbacks = 0;
+        let _allEventsCache = [];
+        function parseConversationEntries(event) {
+            if (Array.isArray(event?.conversation) && event.conversation.length) {
+                return event.conversation;
+            }
+            if (!event?.message) return [];
+            return parseThread(event.message).map(item => ({
+                role: 'client',
+                text: item.text,
+                timestamp: event.timestamp || null
+            }));
+        }
+
+        function buildHandoffButton(eventId, active, compact = false) {
+            const label = active ? 'Liberar IA' : 'Assumir atendimento';
+            const icon = active ? 'ri-robot-2-line' : 'ri-user-voice-line';
+            const sizeStyle = compact ? 'padding:5px 10px; font-size:0.74rem;' : '';
+            return `
+                <div class="takeover-badge" onclick="event.stopPropagation(); toggleHumanTakeover(${eventId}, ${active ? 'false' : 'true'})" style="${sizeStyle}">
+                    <i class="${icon}"></i> ${label}
+                </div>
+            `;
+        }
+
+        function buildHandoffIndicator(active) {
+            if (!active) return '';
+            return `<span class="takeover-indicator"><i class="ri-user-voice-line"></i> Atendimento humano</span>`;
+        }
+
+        async function loadFeedbacks(filterUrl = '/api/events') {
+            const res = await fetch(filterUrl);
+            let events = await res.json();
+            const currentStatusFilter = document.getElementById('filtro-status')?.value || 'ativos';
+            if (currentStatusFilter === 'ativos') {
+                events = events.filter(e => (e.status || 'aberto') !== 'resolvido');
+            }
+            lastFilteredEvents = events;
+            _allEventsCache = events;
+            const container = document.getElementById('feed-list-container');
+            container.innerHTML = '';
+            const countEl = document.getElementById('filter-count');
+            if (filterUrl === '/api/events') { totalFeedbacks = events.length; countEl.innerText = `${events.length} feedbacks`; }
+            else { countEl.innerText = `Mostrando ${events.length} de ${totalFeedbacks} feedbacks`; }
+
+            if (events.length === 0) { container.innerHTML = '<p style="color:var(--text-muted)">Nenhum feedback encontrado.</p>'; return; }
+
+            events.forEach(e => {
+                const u = (e.urgency || '').toLowerCase();
+                let urgencyColor = '#3b82f6';
+                if (u.includes('crit') || u.includes('crít')) urgencyColor = '#ef4444';
+                else if (u.includes('urge')) urgencyColor = '#f59e0b';
+                else if (u.includes('posi')) urgencyColor = '#10b981';
+
+                const status = e.status || 'aberto';
+                const sc = { 'aberto': { color: '#EF4444', label: 'Aberto', icon: 'ri-error-warning-line' }, 'em_andamento': { color: '#F59E0B', label: 'Em Andamento', icon: 'ri-loader-4-line' }, 'resolvido': { color: '#10B981', label: 'Resolvido', icon: 'ri-checkbox-circle-line' } }[status] || { color: '#EF4444', label: 'Aberto', icon: 'ri-error-warning-line' };
+                const conversation = parseConversationEntries(e);
+                const clientMessages = conversation.filter(item => item.role !== 'agent');
+                const interactionCount = Math.max(conversation.length - 1, 0);
+                const firstMsg = clientMessages[0]?.text || e.message || '';
+
+                // Status dropdown (visible for all cards)
+                const statusHtml = `
+                    <div class="status-dropdown" style="position:relative;">
+                        <button onclick="event.stopPropagation(); toggleStatusMenu(${e.id})" style="background:${sc.color}20; color:${sc.color}; border:1px solid ${sc.color}; padding:4px 10px; border-radius:4px; cursor:pointer; font-size:0.75rem; font-weight:600; display:flex; align-items:center; gap:4px;">
+                            <i class="${sc.icon}"></i> ${sc.label} <i class="ri-arrow-down-s-line"></i>
+                        </button>
+                        <div id="status-menu-${e.id}" class="hidden" style="position:absolute; right:0; top:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:4px; z-index:100; min-width:140px; margin-top:4px;">
+                            <div onclick="event.stopPropagation(); updateStatus(${e.id}, 'aberto')" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#EF4444;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-error-warning-line"></i> Aberto</div>
+                            <div onclick="event.stopPropagation(); updateStatus(${e.id}, 'em_andamento')" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#F59E0B;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-loader-4-line"></i> Em Andamento</div>
+                            <div onclick="event.stopPropagation(); updateStatus(${e.id}, 'resolvido')" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#10B981;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-checkbox-circle-line"></i> Resolvido</div>
+                        </div>
+                    </div>`;
+
+                const rawSender = e.remoteJid || e.sender || '';
+                const senderNumber = rawSender.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+
+                // Update count badge
+                const updateBadge = interactionCount > 0
+                    ? `<div class="update-badge"><i class="ri-chat-3-line"></i> ${interactionCount} intera${interactionCount === 1 ? 'ção' : 'ções'}</div>`
+                    : '';
+
+                // Priority row
+                const priorityRow = `<span><span class="priority-dot" style="background:${urgencyColor}"></span>${e.urgency || 'Neutro'}</span>`;
+
+                container.innerHTML += `
+                    <div class="feedback-card clickable" onclick="openThreadModal(${e.id})" data-event-id="${e.id}">
+                        <div class="fb-header">
+                            <span class="fb-tag" style="background:${urgencyColor}20; color:${urgencyColor}; border:1px solid ${urgencyColor}">${e.category}</span>
+                            <div class="fb-time" title="${e.timestamp}"><i class="ri-time-line"></i> ${formatarTempo(e.timestamp)}</div>
+                        </div>
+                        <div class="fb-msg">${formatMessage(firstMsg)}</div>
+                        ${updateBadge}
+                        ${buildHandoffIndicator(e.human_takeover)}
+                        <div class="conversation-actions">
+                            <div class="conversation-badge" onclick="event.stopPropagation(); openThreadModal(${e.id})"><i class="ri-chat-1-line"></i> Ver conversa</div>
+                            ${e.linked_from ? `<div class="linked-badge" onclick="event.stopPropagation(); showLinkedCards(${e.id}, '${(e.sender || e.remoteJid || '').replace(/'/g, "\\'")}')"><i class="ri-links-line"></i> Ver anteriores</div>` : ''}
+                            ${buildHandoffButton(e.id, !!e.human_takeover)}
+                        </div>
+                        <div class="fb-footer" style="margin-top: 10px;">
+                            ${priorityRow}
+                            ${statusHtml}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function showLinkedCards(currentId, senderJid) {
+            const sameUser = _allEventsCache.filter(ev => {
+                const evSender = ev.sender || ev.remoteJid || '';
+                return evSender === senderJid && ev.id !== currentId;
+            });
+            if (sameUser.length === 0) { alert('Nenhum card anterior encontrado.'); return; }
+            closeLinkedModal();
+            const cardsHtml = sameUser.map(c => {
+                const conversation = parseConversationEntries(c);
+                const previewText = conversation.find(item => item.role !== 'agent')?.text || c.message || '';
+                const preview = previewText.substring(0, 80) + (previewText.length > 80 ? '...' : '');
+                const statusLabel = c.status === 'resolvido' ? '✅ Resolvido' : c.status === 'em_andamento' ? '⏳ Em Andamento' : '🔴 Aberto';
+                return `<div onclick="event.stopPropagation(); closeLinkedModal(); openThreadModal(${c.id})" style="padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg-card);margin-bottom:8px;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <span style="font-weight:600;color:var(--text-main);font-size:0.85rem;">${c.category || 'Geral'}</span>
+                        <span style="font-size:0.7rem;color:var(--text-muted);">${formatarTempo(c.timestamp)}</span>
+                    </div>
+                    <div style="color:#d1d5db;font-size:0.8rem;line-height:1.4;">${preview}</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:6px;">${statusLabel}</div>
+                </div>`;
+            }).join('');
+            const modal = document.createElement('div');
+            modal.id = 'linked-modal';
+            modal.innerHTML = `
+                <div style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;" onclick="closeLinkedModal()">
+                    <div style="background:var(--bg-card);border-radius:16px;padding:24px;max-width:400px;width:90%;max-height:70vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <h3 style="margin:0;font-size:1rem;color:var(--text-main);"><i class="ri-links-line" style="margin-right:6px;"></i> Cards anteriores</h3>
+                            <button onclick="closeLinkedModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;"><i class="ri-close-line"></i></button>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">${sameUser.length} card${sameUser.length > 1 ? 's' : ''} do mesmo cliente</div>
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        function closeLinkedModal() { const m = document.getElementById('linked-modal'); if (m) m.remove(); }
+
+        // Thread Modal
+        function openThreadModal(eventId) {
+            const e = _allEventsCache.find(ev => ev.id === eventId);
+            if (!e) return;
+
+            const u = (e.urgency || '').toLowerCase();
+            let urgencyColor = '#3b82f6';
+            if (u.includes('crit') || u.includes('crít')) urgencyColor = '#ef4444';
+            else if (u.includes('urge')) urgencyColor = '#f59e0b';
+            else if (u.includes('posi')) urgencyColor = '#10b981';
+
+            const rawSender = e.remoteJid || e.sender || '';
+            const senderNumber = rawSender.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+            const displayPhone = senderNumber ? `📱 ${senderNumber.replace(/^55/, '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}` : 'Número desconhecido';
+            const displayName = e.name || 'Cliente';
+            const whatsappLink = senderNumber ? `<a href="https://wa.me/${senderNumber}" target="_blank" class="whatsapp-contact-btn" style="text-decoration:none;" title="Contatar"><i class="ri-phone-fill"></i></a>` : '';
+
+            const conversation = parseConversationEntries(e);
+            const thread = conversation.map(item => ({
+                label: item.role === 'agent' ? 'update' : 'original',
+                text: item.text
+            }));
+            let timelineHtml = thread.map((item, idx) => `
+                <div class="thread-item">
+                    <div class="thread-line"></div>
+                    <div class="thread-dot ${item.label}">${idx === 0 ? '<i class="ri-message-2-line"></i>' : '<i class="ri-refresh-line"></i>'}</div>
+                    <div class="thread-content">
+                        <div class="thread-content-label ${item.label}">${idx === 0 ? 'Mensagem Original' : `Atualização ${idx}`}</div>
+                        <div class="thread-content-text">${formatMessage(item.text)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            timelineHtml = conversation.map(item => {
+                const isAgent = item.role === 'agent';
+                const isHuman = item.role === 'human';
+                const roleLabel = isHuman ? 'Atendimento humano' : (isAgent ? 'Seu Pipico' : 'Cliente');
+                const roleClass = isHuman ? 'human' : (isAgent ? 'agent' : 'client');
+                const timeLabel = item.timestamp ? formatarTempo(item.timestamp) : 'Agora';
+                return `
+                    <div class="thread-item ${roleClass}">
+                        <div class="chat-bubble">
+                            <div class="chat-meta">
+                                <span class="chat-role">${roleLabel}</span>
+                                <span class="chat-time">${timeLabel}</span>
+                            </div>
+                            <div class="chat-text">${formatMessage(item.text)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const status = e.status || 'aberto';
+            const sc = { 'aberto': { color: '#EF4444', label: 'Aberto', icon: 'ri-error-warning-line' }, 'em_andamento': { color: '#F59E0B', label: 'Em Andamento', icon: 'ri-loader-4-line' }, 'resolvido': { color: '#10B981', label: 'Resolvido', icon: 'ri-checkbox-circle-line' } }[status] || { color: '#EF4444', label: 'Aberto', icon: 'ri-error-warning-line' };
+            const showStatus = u.includes('urge') || u.includes('crit') || u.includes('crít');
+            const handoffIndicator = buildHandoffIndicator(e.human_takeover);
+            const handoffButton = buildHandoffButton(e.id, !!e.human_takeover, true);
+
+            const statusHtmlModal = showStatus ? `
+                <div class="status-dropdown" style="position:relative;">
+                    <button onclick="toggleStatusMenu('modal-' + ${e.id})" style="background:${sc.color}20; color:${sc.color}; border:1px solid ${sc.color}; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:5px;">
+                        <i class="${sc.icon}"></i> ${sc.label} <i class="ri-arrow-down-s-line"></i>
+                    </button>
+                    <div id="status-menu-modal-${e.id}" class="hidden" style="position:absolute; right:0; bottom:100%; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:4px; z-index:200; min-width:140px; margin-bottom:4px;">
+                        <div onclick="updateStatus(${e.id}, 'aberto'); closeThreadModal()" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#EF4444;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-error-warning-line"></i> Aberto</div>
+                        <div onclick="updateStatus(${e.id}, 'em_andamento'); closeThreadModal()" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#F59E0B;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-loader-4-line"></i> Em Andamento</div>
+                        <div onclick="updateStatus(${e.id}, 'resolvido'); closeThreadModal()" style="padding:8px 12px; cursor:pointer; border-radius:4px; display:flex; align-items:center; gap:6px; color:#10B981;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'"><i class="ri-checkbox-circle-line"></i> Resolvido</div>
+                    </div>
+                </div>` : `<span style="font-size:0.8rem; color:${urgencyColor};"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${urgencyColor};margin-right:5px;"></span>${e.urgency || 'Neutro'}</span>`;
+
+            document.getElementById('thread-modal-body').innerHTML = `
+                <div class="thread-header">
+                    <div>
+                        <div class="modal-title" style="font-size:1.1rem;"><i class="ri-chat-3-fill" style="color:#059669;"></i> ${displayName}</div>
+                        <div class="thread-sender">${displayPhone} ${whatsappLink} <span style="color:var(--border)">|</span> <span style="background:${urgencyColor}20;color:${urgencyColor};border:1px solid ${urgencyColor};font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:4px;">${e.category}</span> ${handoffIndicator}</div>
+                    </div>
+                    <button onclick="closeThreadModal()" style="background:transparent;border:none;color:var(--text-muted);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+                </div>
+                <div class="thread-timeline">${timelineHtml}</div>
+                <div class="thread-footer">
+                    <div class="thread-tools">
+                        ${statusHtmlModal}
+                        ${handoffButton}
+                    </div>
+                    <div style="font-size:0.78rem; color:var(--text-muted);"><i class="ri-time-line"></i> ${formatarTempo(e.timestamp)}</div>
+                </div>
+            `;
+            document.getElementById('thread-modal-overlay').classList.remove('hidden');
+        }
+
+        function closeThreadModal() {
+            document.getElementById('thread-modal-overlay').classList.add('hidden');
+        }
+
+        let lastFilteredEvents = [];
+
+        function aplicarFiltros() {
+            const cat = document.getElementById('filtro-categoria').value;
+            const pri = document.getElementById('filtro-prioridade').value;
+            const st = document.getElementById('filtro-status').value;
+            let params = [];
+            if (cat) params.push(`categoria=${encodeURIComponent(cat)}`);
+            if (pri) params.push(`prioridade=${encodeURIComponent(pri)}`);
+            if (st && st !== 'ativos') params.push(`status=${encodeURIComponent(st)}`);
+            const url = '/api/events' + (params.length ? '?' + params.join('&') : '');
+            const loadPromise = loadFeedbacks(url);
+            // Show recovery button when filtering negative sentiments
+            const recoveryBtn = document.getElementById('btn-recovery');
+            const hasNegFilter = pri === 'Critico' || pri === 'Urgente';
+            if (hasNegFilter && (cat || pri)) {
+                recoveryBtn.classList.remove('hidden');
+            } else {
+                recoveryBtn.classList.add('hidden');
+            }
+            return loadPromise;
+        }
+
+        function limparFiltros() {
+            document.getElementById('filtro-categoria').value = '';
+            document.getElementById('filtro-prioridade').value = '';
+            document.getElementById('filtro-status').value = 'ativos';
+            document.getElementById('btn-recovery').classList.add('hidden');
+            aplicarFiltros();
+        }
+
+        async function popularFiltrosCategorias() {
+            const res = await fetch('/api/config');
+            const config = await res.json();
+            const select = document.getElementById('filtro-categoria');
+            select.innerHTML = '<option value="">Todas Categorias</option>';
+            config.categories.forEach(cat => { select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`; });
+        }
+
+        // Export and Status menus
+        function toggleExportMenu(section) {
+            document.querySelectorAll('.export-menu').forEach(m => { if (m.id !== 'export-menu-' + section) m.classList.add('hidden'); });
+            document.getElementById('export-menu-' + section).classList.toggle('hidden');
+        }
+        document.addEventListener('click', e => { if (!e.target.closest('.export-dropdown')) document.querySelectorAll('.export-menu').forEach(m => m.classList.add('hidden')); });
+
+        function toggleStatusMenu(id) {
+            document.querySelectorAll('[id^="status-menu-"]').forEach(m => { if (m.id !== 'status-menu-' + id) m.classList.add('hidden'); });
+            document.getElementById('status-menu-' + id).classList.toggle('hidden');
+        }
+        document.addEventListener('click', e => { if (!e.target.closest('.status-dropdown')) document.querySelectorAll('[id^="status-menu-"]').forEach(m => m.classList.add('hidden')); });
+
+        async function updateStatus(id, newStatus) {
+            const modalVisible = !document.getElementById('thread-modal-overlay').classList.contains('hidden');
+            const res = await fetch('/api/feedback/' + id + '/status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }) });
+            if (!res.ok) return;
+            await aplicarFiltros();
+            if (modalVisible) {
+                const updated = _allEventsCache.find(ev => ev.id === id);
+                if (updated) openThreadModal(id);
+                else closeThreadModal();
+            }
+        }
+
+        async function toggleHumanTakeover(id, enabled) {
+            const modalVisible = !document.getElementById('thread-modal-overlay').classList.contains('hidden');
+            const res = await fetch('/api/feedback/' + id + '/handoff', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            });
+            if (!res.ok) return;
+            await aplicarFiltros();
+            if (modalVisible) {
+                const updated = _allEventsCache.find(ev => ev.id === id);
+                if (updated) openThreadModal(id);
+                else closeThreadModal();
+            }
+        }
+
+        // Config Views
+        async function loadConfigViews() {
+            const res = await fetch('/api/config');
+            const config = await res.json();
+
+            const rGrid = document.getElementById('regions-grid');
+            rGrid.innerHTML = '';
+            config.regions.forEach(r => {
+                rGrid.innerHTML += `<div class="manage-card"><h3>${r.name} <i class="ri-store-line"></i></h3><h2>${r.count}</h2><p>Feedbacks recebidos</p><div class="btn-delete" onclick="delItem('regions', '${r.name}')">Excluir</div></div>`;
+            });
+
+            const cGrid = document.getElementById('categories-grid');
+            cGrid.innerHTML = '';
+            config.categories.forEach(c => {
+                cGrid.innerHTML += `<div class="manage-card" style="border-left: 4px solid ${c.color}"><h3>${c.name} <i class="ri-price-tag-3-fill" style="color:${c.color}"></i></h3><h2>${c.count}</h2><p>Feedbacks recebidos</p><div class="btn-delete" onclick="delItem('categories', '${c.name}')">Excluir</div></div>`;
+            });
+        }
+
+        function getPromotionFallbackPreview() {
+            return 'Ainda não recebi as promoções atualizadas. Se quiser, já deixo sua mensagem registrada para a equipe conferir.';
+        }
+
+        function updatePromotionCounters() {
+            const dayText = document.getElementById('promotions-day')?.value || '';
+            const weekText = document.getElementById('promotions-week')?.value || '';
+            document.getElementById('promotions-day-count').innerText = `${dayText.trim().length} caracteres`;
+            document.getElementById('promotions-week-count').innerText = `${weekText.trim().length} caracteres`;
+        }
+
+        function formatPromotionsPreviewText(rawText) {
+            return (rawText || '')
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(line => (/^([*•-]|\d+[.)])\s+/.test(line) ? line : `• ${line}`))
+                .join('\n');
+        }
+
+        function renderPromotionsPreview() {
+            const dayText = (document.getElementById('promotions-day')?.value || '').trim();
+            const weekText = (document.getElementById('promotions-week')?.value || '').trim();
+            const formattedDay = formatPromotionsPreviewText(dayText);
+            const formattedWeek = formatPromotionsPreviewText(weekText);
+            const preview = document.getElementById('promotions-preview-response');
+            if (!preview) return;
+
+            if (dayText && weekText) {
+                preview.textContent = `*Promoções de hoje no Atacaforte:*\n${formattedDay}\n\n*Promoções da semana no Atacaforte:*\n${formattedWeek}`;
+            } else if (dayText) {
+                preview.textContent = `*Promoções de hoje no Atacaforte:*\n${formattedDay}`;
+            } else if (weekText) {
+                preview.textContent = `*Promoções da semana no Atacaforte:*\n${formattedWeek}`;
+            } else {
+                preview.textContent = getPromotionFallbackPreview();
+            }
+
+            updatePromotionCounters();
+        }
+
+        async function loadPromotionsView() {
+            try {
+                const res = await fetch('/api/promotions');
+                const promotions = await res.json();
+                document.getElementById('promotions-day').value = promotions.day || '';
+                document.getElementById('promotions-week').value = promotions.week || '';
+                document.getElementById('promo-save-status').innerText = '';
+                renderPromotionsPreview();
+            } catch (error) {
+                document.getElementById('promo-save-status').innerText = 'Erro ao carregar promoções.';
+            }
+        }
+
+        async function savePromotions() {
+            const button = document.getElementById('save-promotions-btn');
+            const status = document.getElementById('promo-save-status');
+            const payload = {
+                day: document.getElementById('promotions-day').value,
+                week: document.getElementById('promotions-week').value
+            };
+
+            button.disabled = true;
+            status.style.color = '#9ca3af';
+            status.innerText = 'Salvando promoções...';
+
+            try {
+                const res = await fetch('/api/promotions', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    throw new Error('save_failed');
+                }
+
+                status.style.color = '#86efac';
+                status.innerText = 'Promoções salvas. O Seu Pipico já responde com essa versão.';
+                renderPromotionsPreview();
+            } catch (error) {
+                status.style.color = '#fca5a5';
+                status.innerText = 'Não consegui salvar agora. Tente novamente.';
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Charts
+        function renderCharts(events, catDef) {
+            // Timeline
+            const hourCounts = {};
+            events.forEach(e => {
+                if (e.timestamp) {
+                    let hour;
+                    if (e.timestamp.includes('T')) { hour = new Date(e.timestamp).getHours().toString().padStart(2, '0') + ':00'; }
+                    else if (e.timestamp.includes('/')) { hour = e.timestamp.split(' ')[1].split(':')[0].padStart(2, '0') + ':00'; }
+                    if (hour) hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+                }
+            });
+            const allHours = Object.keys(hourCounts).sort();
+            if (currentChartTimeline) currentChartTimeline.destroy();
+            const ctxT = document.getElementById('timelineChart').getContext('2d');
+            const grad = ctxT.createLinearGradient(0, 0, 0, 200);
+            grad.addColorStop(0, 'rgba(5, 150, 105, 0.6)');
+            grad.addColorStop(1, 'rgba(5, 150, 105, 0.05)');
+            currentChartTimeline = new Chart(ctxT, {
+                type: 'line',
+                data: { labels: allHours.length ? allHours : ['--'], datasets: [{ label: 'Feedbacks', data: allHours.length ? allHours.map(h => hourCounts[h]) : [0], borderColor: '#059669', backgroundColor: grad, fill: true, tension: 0.4, pointBackgroundColor: '#059669', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 5, pointHoverRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1f2937', titleColor: '#fff', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1, padding: 12, displayColors: false } }, scales: { y: { grid: { color: '#23252e' }, beginAtZero: true, ticks: { color: '#9ca3af' } }, x: { grid: { display: false }, ticks: { color: '#9ca3af' } } } }
+            });
+
+            // Sentiment Bars
+            const sentCounts = { 'Positivo': 0, 'Neutro': 0, 'Urgente': 0, 'Critico': 0 };
+            events.forEach(e => { const s = e.urgency || 'Neutro'; if (s in sentCounts) sentCounts[s]++; else if (s.includes('Crít')) sentCounts['Critico']++; });
+            const total = Object.values(sentCounts).reduce((a, b) => a + b, 0) || 1;
+            const sentColors = { 'Positivo': { bg: 'linear-gradient(90deg, #22c55e, #16a34a)', color: '#22c55e' }, 'Neutro': { bg: 'linear-gradient(90deg, #3b82f6, #2563eb)', color: '#3b82f6' }, 'Urgente': { bg: 'linear-gradient(90deg, #f59e0b, #d97706)', color: '#f59e0b' }, 'Critico': { bg: 'linear-gradient(90deg, #ef4444, #dc2626)', color: '#ef4444' } };
+            document.getElementById('sentiment-bars').innerHTML = Object.entries(sentCounts).map(([name, count]) => {
+                const pct = ((count / total) * 100).toFixed(0);
+                const cfg = sentColors[name];
+                return `<div style="margin-bottom: 16px;"><div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem;"><span style="color: ${cfg.color}; font-weight: 600;">${name}</span><span style="color: #9ca3af;">${count} (${pct}%)</span></div><div style="background: #1f2937; border-radius: 8px; height: 12px; overflow: hidden;"><div style="background: ${cfg.bg}; width: ${pct}%; height: 100%; border-radius: 8px; transition: width 0.5s ease;"></div></div></div>`;
+            }).join('');
+
+            // Donut
+            const catCount = {};
+            events.forEach(e => catCount[e.category] = (catCount[e.category] || 0) + 1);
+            const labels = catDef.map(c => c.name);
+            const dataVal = catDef.map(c => catCount[c.name] || 0);
+            const colors = catDef.map(c => c.color);
+            const totalFb = dataVal.reduce((a, b) => a + b, 0);
+            document.getElementById('donut-total').innerText = totalFb;
+            document.getElementById('donut-legend').innerHTML = catDef.map((cat, i) => {
+                const count = catCount[cat.name] || 0;
+                const pct = totalFb > 0 ? ((count / totalFb) * 100).toFixed(0) : 0;
+                return `<div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #23252e;"><div style="display: flex; align-items: center; gap: 10px;"><div style="width: 12px; height: 12px; border-radius: 3px; background: ${cat.color};"></div><span style="color: #e5e7eb;">${cat.name}</span></div><div style="display: flex; align-items: center; gap: 8px;"><span style="color: #9ca3af; font-size: 0.8rem;">${pct}%</span><span style="color: white; font-weight: 600;">${count}</span></div></div>`;
+            }).join('');
+
+            if (currentChartDonut) currentChartDonut.destroy();
+            currentChartDonut = new Chart(document.getElementById('donutChart'), {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data: dataVal, backgroundColor: colors, borderWidth: 0, cutout: '75%', hoverOffset: 10 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1f2937', titleColor: '#fff', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1, padding: 12 } } }
+            });
+        }
+
+        // Config Actions
+        async function addItem(endpoint) {
+            const name = prompt("Nome:");
+            if (name) {
+                await fetch('/api/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, color: '#' + Math.floor(Math.random() * 16777215).toString(16) }) });
+                loadConfigViews();
+            }
+        }
+        async function delItem(endpoint, name) {
+            if (confirm('Excluir?')) {
+                await fetch('/api/' + endpoint, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+                loadConfigViews();
+            }
+        }
+
+        // Top Insights
+        async function loadTopInsights() {
+            try {
+                const res = await fetch('/api/analytics/top');
+                const data = await res.json();
+                const compContainer = document.getElementById('top-compliments-list');
+                if (data.compliments && data.compliments.length > 0) {
+                    compContainer.innerHTML = data.compliments.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #23252e; padding-bottom:8px;"><span style="font-weight:500"><span style="background:#22c55e20; color:#22c55e; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-right:8px">#${i + 1}</span>${item.topic}</span><span style="color:#22c55e; font-weight:bold">${item.count} <small style="opacity:0.6; font-weight:normal">menções</small></span></div>`).join('');
+                } else { compContainer.innerHTML = '<p style="color:var(--text-muted)">Sem elogios ainda.</p>'; }
+
+                const probContainer = document.getElementById('top-problems-list');
+                if (data.problems && data.problems.length > 0) {
+                    probContainer.innerHTML = data.problems.map((item, i) => `<div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #23252e; padding-bottom:8px;"><span style="font-weight:500"><span style="background:#ef444420; color:#ef4444; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-right:8px">#${i + 1}</span>${item.topic}</span><span style="color:#ef4444; font-weight:bold">${item.count} <small style="opacity:0.6; font-weight:normal">reclamações</small></span></div>`).join('');
+                } else { probContainer.innerHTML = '<p style="color:var(--text-muted)">Sem problemas críticos ainda.</p>'; }
+            } catch (e) { console.error("Error loading insights:", e); }
+        }
+
+        // Critical Alert System
+        let ultimoFeedbackId = 0;
+        async function verificarNovosFeedbacks() {
+            try {
+                const res = await fetch('/api/events');
+                const feedbacks = await res.json();
+                if (feedbacks.length > 0) {
+                    feedbacks.sort((a, b) => b.id - a.id);
+                    const mais = feedbacks[0];
+                    if (mais.id > ultimoFeedbackId && ultimoFeedbackId !== 0) {
+                        const u = (mais.urgency || '').toLowerCase();
+                        if (u.includes('crit') || u.includes('crít')) mostrarAlerta(mais, 'critico');
+                        else if (u.includes('urge')) mostrarAlerta(mais, 'urgente');
+                    }
+                    ultimoFeedbackId = Math.max(ultimoFeedbackId, mais.id);
+                }
+            } catch (e) { console.error('Erro:', e); }
+        }
+
+        function mostrarAlerta(fb, tipo) {
+            if (Notification.permission === 'granted') {
+                new Notification(tipo === 'critico' ? '🚨 ALERTA CRÍTICO!' : '⚠️ Feedback Urgente', { body: fb.message, tag: 'fb-' + fb.id });
+            }
+            const div = document.createElement('div');
+            div.className = 'alerta-critico';
+            div.innerHTML = `<button class="close-btn" onclick="this.parentElement.remove()">×</button><strong>${tipo === 'critico' ? '🚨 ALERTA CRÍTICO' : '⚠️ URGENTE'}</strong><p>"${fb.message}"</p><small>${fb.category} - ${fb.timestamp}</small>`;
+            const existing = document.querySelectorAll('.alerta-critico');
+            if (existing.length > 0) div.style.top = (20 + existing.length * 120) + 'px';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 10000);
+        }
+
+        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+
+        // --- MASS RECOVERY ---
+        let recoveryRecipients = [];
+
+        async function openRecoveryModal() {
+            const modal = document.getElementById('recovery-modal');
+            modal.style.display = 'flex';
+            const cat = document.getElementById('filtro-categoria').value;
+            const pri = document.getElementById('filtro-prioridade').value;
+            document.getElementById('recovery-subtitle').innerText = `${lastFilteredEvents.length} clientes | ${cat || 'Todas Categorias'} | ${pri || 'Todas Prioridades'}`;
+
+            // Build recipient list from filtered events
+            const seen = new Set();
+            recoveryRecipients = [];
+            lastFilteredEvents.forEach(e => {
+                const raw = e.remoteJid || e.sender || '';
+                const phone = raw.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+                if (phone && !seen.has(phone)) {
+                    seen.add(phone);
+                    recoveryRecipients.push({ name: e.name || 'Cliente', phone: phone, checked: true, message: e.message });
+                }
+            });
+            renderRecipients();
+
+            // Generate AI message
+            const textarea = document.getElementById('recovery-message');
+            textarea.value = 'Gerando mensagem com IA...';
+            textarea.disabled = true;
+            document.getElementById('btn-regen').disabled = true;
+
+            try {
+                const samples = lastFilteredEvents.slice(0, 5).map(e => e.message);
+                const res = await fetch('/api/generate-recovery-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: cat || 'Geral', urgency: pri || 'Crítico', count: recoveryRecipients.length, samples: samples })
+                });
+                const data = await res.json();
+                textarea.value = data.message;
+            } catch (e) {
+                textarea.value = `Olá [NOME]! 👋\n\nRecebemos seu feedback e queremos te dizer: você foi ouvido!\n\nEstamos tomando medidas para melhorar. Como agradecimento, você tem 10% de desconto na sua próxima visita.\n\nMostre esta mensagem no caixa. Obrigado! 💚`;
+            }
+            textarea.disabled = false;
+            document.getElementById('btn-regen').disabled = false;
+            updateCharCount();
+            textarea.addEventListener('input', updateCharCount);
+        }
+
+        function closeRecoveryModal() {
+            document.getElementById('recovery-modal').style.display = 'none';
+        }
+
+        function updateCharCount() {
+            const textarea = document.getElementById('recovery-message');
+            document.getElementById('recovery-char-count').innerText = `${textarea.value.length} caracteres`;
+        }
+
+        function renderRecipients() {
+            const list = document.getElementById('recipient-list');
+            const selected = recoveryRecipients.filter(r => r.checked).length;
+            document.getElementById('selected-count').innerText = selected;
+            list.innerHTML = recoveryRecipients.map((r, i) => `
+                <div class="recipient-item">
+                    <input type="checkbox" ${r.checked ? 'checked' : ''} onchange="toggleRecipient(${i}, this.checked)">
+                    <span class="recipient-name">${r.name}</span>
+                    <span class="recipient-phone">${formatPhone(r.phone)}</span>
+                    <button class="recipient-send-btn" onclick="openWhatsApp(${i})" title="Abrir conversa">
+                        <i class="ri-whatsapp-line"></i> Enviar
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function formatPhone(phone) {
+            if (phone.length >= 12) return `+${phone.slice(0, 2)} (${phone.slice(2, 4)}) ${phone.slice(4, 9)}-${phone.slice(9)}`;
+            return phone;
+        }
+
+        function toggleRecipient(idx, checked) {
+            recoveryRecipients[idx].checked = checked;
+            const allChecked = recoveryRecipients.every(r => r.checked);
+            document.getElementById('select-all-recipients').checked = allChecked;
+            document.getElementById('selected-count').innerText = recoveryRecipients.filter(r => r.checked).length;
+        }
+
+        function toggleAllRecipients(checked) {
+            recoveryRecipients.forEach(r => r.checked = checked);
+            renderRecipients();
+        }
+
+        function openWhatsApp(idx) {
+            const r = recoveryRecipients[idx];
+            const msg = document.getElementById('recovery-message').value.replace('[NOME]', r.name);
+            window.open(`https://wa.me/${r.phone}?text=${encodeURIComponent(msg)}`, '_blank');
+            showToast(`WhatsApp aberto para ${r.name}`);
+        }
+
+        function copyAllMessages() {
+            const msg = document.getElementById('recovery-message').value;
+            navigator.clipboard.writeText(msg).then(() => {
+                showToast('Mensagem copiada!');
+            });
+        }
+
+        async function regenerateMessage() {
+            const btn = document.getElementById('btn-regen');
+            const textarea = document.getElementById('recovery-message');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Gerando...';
+            textarea.disabled = true;
+
+            const cat = document.getElementById('filtro-categoria').value;
+            const pri = document.getElementById('filtro-prioridade').value;
+            try {
+                const samples = lastFilteredEvents.slice(0, 5).map(e => e.message);
+                const res = await fetch('/api/generate-recovery-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: cat || 'Geral', urgency: pri || 'Crítico', count: recoveryRecipients.length, samples: samples })
+                });
+                const data = await res.json();
+                textarea.value = data.message;
+            } catch (e) {
+                console.error('Regen error:', e);
+            }
+            textarea.disabled = false;
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ri-sparkling-2-fill"></i> Gerar Nova';
+            updateCharCount();
+        }
+
+        function showToast(text) {
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.innerHTML = `<i class="ri-checkbox-circle-fill"></i> ${text}`;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // --- PREMIUM INTELLIGENCE ---
+        async function loadIntelligence() {
+            loadROI();
+            loadCompetitors();
+            loadCrisis();
+            loadCriticalHours();
+            loadChurn();
+        }
+
+        async function loadROI() {
+            try {
+                const res = await fetch('/api/analytics/roi');
+                const d = await res.json();
+                document.getElementById('roi-saved').innerText = `R$ ${d.monthly_saved.toLocaleString('pt-BR')}`;
+                document.getElementById('roi-risk').innerText = `R$ ${d.at_risk_monthly.toLocaleString('pt-BR')}`;
+                document.getElementById('roi-rate').innerText = `${d.resolution_rate}%`;
+                document.getElementById('roi-annual').innerText = `R$ ${d.annual_saved.toLocaleString('pt-BR')}`;
+                document.getElementById('roi-resolved').innerText = `${d.critical_resolved} clientes retidos`;
+                document.getElementById('roi-open').innerText = `${d.open_critical} clientes em risco`;
+                document.getElementById('roi-time').innerText = d.avg_resolution_hours > 0 ? `Tempo médio: ${d.avg_resolution_hours}h` : 'Tempo médio: --';
+            } catch (e) { console.error('ROI error:', e); }
+        }
+
+        async function loadCompetitors() {
+            try {
+                const res = await fetch('/api/analytics/competitors');
+                const d = await res.json();
+                const container = document.getElementById('competitors-list');
+                if (!d.competitors || d.competitors.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="ri-shield-check-fill" style="font-size:2rem; color:#22c55e; display:block; margin-bottom:10px;"></i>Nenhuma menção a concorrentes detectada nos feedbacks. Isso é bom!</div>`;
+                    return;
+                }
+                const ctxLabels = { preco: '💰 Preço', variedade: '📦 Variedade', qualidade: '⭐ Qualidade', atendimento: '🤝 Atendimento', estrutura: '🏗️ Estrutura', promocao: '🏷️ Promoções', geral: '📋 Geral' };
+                container.innerHTML = `<div style="margin-bottom:12px; font-size:0.85rem; color:var(--text-muted)">${d.total_mentions} menções totais a concorrentes</div>` +
+                    d.competitors.map(c => {
+                        const trendColor = c.trend_pct > 0 ? '#ef4444' : '#22c55e';
+                        const trendIcon = c.trend_pct > 0 ? 'ri-arrow-up-line' : 'ri-arrow-down-line';
+                        const trendText = c.trend_pct > 0 ? `+${c.trend_pct}%` : `${c.trend_pct}%`;
+                        return `<div style="background:var(--bg-hover); padding:16px; border-radius:10px; margin-bottom:12px; border-left:3px solid #f59e0b;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-weight:700; font-size:1.1rem;">${c.name}</span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="background:${trendColor}20; color:${trendColor}; padding:3px 8px; border-radius:4px; font-size:0.75rem; font-weight:600;"><i class="${trendIcon}"></i> ${trendText} esta semana</span>
+                                    <span style="background:#f59e0b20; color:#f59e0b; padding:3px 8px; border-radius:4px; font-size:0.75rem; font-weight:600;">${c.total} menções</span>
+                                </div>
+                            </div>
+                            <div style="font-size:0.85rem; color:var(--text-muted);">Principal contexto: <strong style="color:#f59e0b">${ctxLabels[c.top_context] || c.top_context}</strong></div>
+                        </div>`;
+                    }).join('');
+                if (d.recent_mentions.length > 0) {
+                    container.innerHTML += `<div style="margin-top:16px; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:8px;">MENÇÕES RECENTES</div>` +
+                        d.recent_mentions.slice(0, 5).map(m => `<div style="padding:10px 14px; border-bottom:1px solid var(--border); font-size:0.85rem; display:flex; justify-content:space-between;"><span style="color:#d1d5db; flex:1;">"${m.mensagem}"</span><span style="color:var(--text-muted); white-space:nowrap; margin-left:12px;">${formatarTempo(m.timestamp)}</span></div>`).join('');
+                }
+            } catch (e) { console.error('Competitors error:', e); }
+        }
+
+        async function loadCrisis() {
+            try {
+                const res = await fetch('/api/analytics/crisis-trends');
+                const d = await res.json();
+                const container = document.getElementById('crisis-list');
+                if (!d.crises || d.crises.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="ri-shield-check-fill" style="font-size:2rem; color:#22c55e; display:block; margin-bottom:10px;"></i>Nenhuma tendência de crise detectada nas últimas 48h. Tudo sob controle!</div>`;
+                    return;
+                }
+                container.innerHTML = d.crises.map(c => {
+                    const sev = c.severity === 'critical' ? { color: '#ef4444', icon: 'ri-alarm-warning-fill', label: 'CRÍTICO' } : { color: '#f59e0b', icon: 'ri-error-warning-line', label: 'ATENÇÃO' };
+                    return `<div style="background:${sev.color}10; padding:16px; border-radius:10px; margin-bottom:12px; border-left:3px solid ${sev.color};">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:700;"><i class="${sev.icon}" style="color:${sev.color}"></i> ${c.category}</span>
+                            <span style="background:${sev.color}20; color:${sev.color}; padding:3px 8px; border-radius:4px; font-size:0.75rem; font-weight:600;">+${c.growth_pct}% crescimento</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">Últimas 48h: <strong>${c.recent_count}</strong> reclamações (antes: ${c.previous_count})</div>
+                        ${c.sample_messages.length > 0 ? `<div style="margin-top:8px; font-size:0.8rem; color:#9ca3af; font-style:italic;">"${c.sample_messages[0]}"</div>` : ''}
+                    </div>`;
+                }).join('');
+                if (d.trending_words.length > 0) {
+                    container.innerHTML += `<div style="margin-top:12px; font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:8px;">PALAVRAS MAIS CITADAS</div><div style="display:flex; gap:8px; flex-wrap:wrap;">` +
+                        d.trending_words.map(w => `<span style="background:var(--bg-card); border:1px solid var(--border); padding:4px 10px; border-radius:20px; font-size:0.8rem;">${w.word} <span style="color:#ef4444; font-weight:600;">${w.count}</span></span>`).join('') + `</div>`;
+                }
+            } catch (e) { console.error('Crisis error:', e); }
+        }
+
+        async function loadCriticalHours() {
+            try {
+                const res = await fetch('/api/analytics/critical-hours');
+                const d = await res.json();
+                const container = document.getElementById('critical-hours-list');
+                if (!d.peak_hours || d.peak_hours.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="ri-time-line" style="font-size:2rem; color:#22c55e; display:block; margin-bottom:10px;"></i>Sem reclamações suficientes para análise de horários.</div>`;
+                    return;
+                }
+                container.innerHTML = `<div style="margin-bottom:12px; font-size:0.85rem; color:var(--text-muted)">${d.total_analyzed} reclamações analisadas</div>` +
+                    d.peak_hours.map((h, i) => {
+                        const intensity = Math.min(100, (h.total_complaints / d.peak_hours[0].total_complaints) * 100);
+                        return `<div style="background:var(--bg-hover); padding:14px; border-radius:10px; margin-bottom:10px; display:flex; align-items:center; gap:16px;">
+                            <div style="min-width:60px; text-align:center;"><div style="font-size:1.4rem; font-weight:700; color:#a855f7;">${h.hour}</div><div style="font-size:0.7rem; color:var(--text-muted);">${h.total_complaints} recl.</div></div>
+                            <div style="flex:1;"><div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-weight:600; font-size:0.9rem;">${h.worst_category}</span><span style="color:#ef4444; font-size:0.8rem; font-weight:600;">${h.worst_count} reclamações</span></div>
+                            <div style="background:#1f2937; border-radius:8px; height:8px; overflow:hidden;"><div style="background:linear-gradient(90deg, #a855f7, #ef4444); width:${intensity}%; height:100%; border-radius:8px;"></div></div></div>
+                        </div>`;
+                    }).join('');
+            } catch (e) { console.error('Critical hours error:', e); }
+        }
+
+        async function loadChurn() {
+            try {
+                const res = await fetch('/api/analytics/churn');
+                const d = await res.json();
+                const container = document.getElementById('churn-list');
+                if (!d.at_risk_customers || d.at_risk_customers.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="ri-user-heart-fill" style="font-size:2rem; color:#22c55e; display:block; margin-bottom:10px;"></i>Nenhum cliente em risco de êxodo detectado. Seus clientes estão felizes!</div>`;
+                    return;
+                }
+                container.innerHTML = `<div style="margin-bottom:12px; font-size:0.85rem; color:var(--text-muted)">${d.total_tracked} clientes rastreados • <span style="color:#ef4444; font-weight:600;">${d.high_risk} alto risco</span> • <span style="color:#f59e0b;">${d.medium_risk} médio risco</span></div>` +
+                    d.at_risk_customers.slice(0, 8).map(c => {
+                        const riskColor = c.risk_level === 'critical' ? '#ef4444' : '#f59e0b';
+                        return `<div style="background:${riskColor}08; padding:14px; border-radius:10px; margin-bottom:10px; border-left:3px solid ${riskColor};">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-weight:700;"><i class="ri-user-line" style="color:${riskColor}"></i> ${c.name}</span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="background:${riskColor}20; color:${riskColor}; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:700;">RISCO ${c.risk_score}%</span>
+                                    ${c.phone ? `<a href="https://wa.me/${c.phone}" target="_blank" class="whatsapp-contact-btn" style="width:24px;height:24px;font-size:0.75rem;" title="Contatar"><i class="ri-phone-fill"></i></a>` : ''}
+                                </div>
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">${c.total_interactions} interações • Último contato: ${c.days_since_last} dias atrás</div>
+                            <div style="font-size:0.8rem; color:#9ca3af;">${c.reasons.join(' • ')}</div>
+                        </div>`;
+                    }).join('');
+            } catch (e) { console.error('Churn error:', e); }
+        }
+
+        document.getElementById('promotions-day')?.addEventListener('input', renderPromotionsPreview);
+        document.getElementById('promotions-week')?.addEventListener('input', renderPromotionsPreview);
+        renderPromotionsPreview();
+
+        // Init
+        loadData();
+        loadTopInsights();
+        popularFiltrosCategorias();
+        verificarNovosFeedbacks();
+        setInterval(verificarNovosFeedbacks, 10000);
+
+        // Auto-refresh
+        setInterval(() => {
+            const dv = !document.getElementById('view-dashboard').classList.contains('hidden');
+            const fv = !document.getElementById('view-feedbacks').classList.contains('hidden');
+            const cv = !document.getElementById('view-lojas').classList.contains('hidden') || !document.getElementById('view-categories').classList.contains('hidden');
+            const iv = !document.getElementById('view-intel').classList.contains('hidden');
+            if (dv) { loadData(); loadTopInsights(); }
+            if (fv) aplicarFiltros();
+            if (cv) loadConfigViews();
+            if (iv) loadIntelligence();
+        }, 5000);
+
+        // Close thread modal on Esc
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeThreadModal(); });
+    </script>
+
+    <!-- Thread Timeline Modal -->
+    <div id="thread-modal-overlay" class="modal-overlay hidden" onclick="if(event.target===this) closeThreadModal()">
+        <div class="modal-thread-box" id="thread-modal-body">
+            <!-- Populated by openThreadModal() -->
+        </div>
+    </div>
+
+</body>
+
+</html>
