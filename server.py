@@ -1834,27 +1834,91 @@ def is_repetitive_followup_reply(reply, conversation_entries):
 
     return SequenceMatcher(None, current_norm, previous_norm).ratio() >= 0.82
 
+def detect_emotional_escalation(conversation_entries):
+    """Detecta se o cliente está escalando emocionalmente ao longo da conversa.
+
+    Retorna 'escalando' se houver progressão crescente de frustração/irritação,
+    'estavel' caso contrário. Usado para ajustar o tom do Pipico no prompt.
+    """
+    if not conversation_entries or len(conversation_entries) < 2:
+        return 'estavel'
+
+    # Palavras que indicam frustração crescente
+    palavras_irritacao = {
+        'absurdo', 'vergonha', 'ridiculo', 'ridículo', 'inacreditavel', 'inacreditável',
+        'horrivel', 'horrível', 'pessimo', 'péssimo', 'nao aguento', 'não aguento',
+        'ultima vez', 'última vez', 'nunca mais', 'to com raiva', 'estou com raiva',
+        'pior', 'ainda pior', 'continua', 'continua igual', 'nada mudou', 'mesmo problema',
+        'sempre assim', 'todo dia', 'nao resolve', 'não resolve', 'desrespeit',
+        'processando', 'chamar imprensa', 'reclame aqui', 'procon'
+    }
+
+    mensagens_cliente = [
+        e.get('text', '') for e in conversation_entries
+        if e.get('role') == 'user' and e.get('text')
+    ]
+
+    if len(mensagens_cliente) < 2:
+        return 'estavel'
+
+    # Conta presença de palavras de irritação em cada mensagem
+    pontuacoes = []
+    for msg in mensagens_cliente[-4:]:  # Olha as últimas 4 mensagens do cliente
+        msg_norm = normalize_text(msg)
+        pontos = sum(1 for p in palavras_irritacao if p in msg_norm)
+        pontuacoes.append(pontos)
+
+    # Se a última mensagem tem mais palavras de irritação que a primeira, está escalando
+    if len(pontuacoes) >= 2 and pontuacoes[-1] > pontuacoes[0]:
+        return 'escalando'
+
+    # Ou se a última mensagem sozinha tem 2+ palavras de irritação
+    if pontuacoes and pontuacoes[-1] >= 2:
+        return 'escalando'
+
+    return 'estavel'
+
+
 def build_followup_feedback_reply(text, category, urgency):
+    """Gera resposta variada para follow-ups de feedback, evitando frases corporativas repetitivas."""
+    import random
     text_norm = normalize_text(text or "")
 
+    # Cliente menciona constrangimento ou vergonha
     if any(term in text_norm for term in ('constrangedor', 'constrangimento', 'vergonha', 'chato')):
-        return (
-            "Entendo, e isso realmente e constrangedor. Vou manter esse ponto no registro com prioridade, porque esse feedback e muito importante para o Atacaforte."
-        )
+        opcoes = [
+            "Entendo, e isso não devia ter acontecido. Já está no registro com atenção especial.",
+            "Fica tranquilo, não passou em branco — o time vai ver isso com cuidado.",
+            "Poxa, realmente não devia. Já deixei esse detalhe destacado para a equipe.",
+        ]
+        return random.choice(opcoes)
 
+    # Cliente demonstra expectativa de solução
     if any(term in text_norm for term in ('esper', 'tomara', 'resolvam', 'resolva', 'resolvido')):
-        return (
-            "Pode deixar, vou manter esse ponto sinalizado para a equipe acompanhar com atencao. Seu feedback e muito importante para o Atacaforte."
-        )
+        opcoes = [
+            "Pode contar com isso. A equipe vai acompanhar com atenção.",
+            "Faz sentido esperar isso. Já está sinalizado para quem precisa ver.",
+            "Concordo, e o time vai olhar pra isso com atenção.",
+        ]
+        return random.choice(opcoes)
 
+    # Feedback crítico ou urgente
     if urgency in ["Critico", "Urgente"]:
-        return (
-            "Entendi, e vou manter esse ponto destacado no seu registro para acompanhamento. Esse feedback e muito importante para o Atacaforte."
-        )
+        opcoes = [
+            "Entendi. Esse ponto ficou destacado no registro — a equipe vai acompanhar.",
+            "Tá registrado com prioridade. Obrigado por insistir em nos contar.",
+            "Esse tipo de situação precisa de atenção de verdade. Já está marcado.",
+        ]
+        return random.choice(opcoes)
 
-    return (
-        "Entendi. Vou manter isso junto do seu registro para a equipe acompanhar. Esse feedback e muito importante para o Atacaforte."
-    )
+    # Fallback geral
+    opcoes = [
+        "Anotado. A equipe vai ver isso.",
+        "Tudo certo, já está no registro.",
+        "Entendido, obrigado por reforçar.",
+        "Registrado. Obrigado por contar mais uma vez.",
+    ]
+    return random.choice(opcoes)
 
 def looks_like_product_inquiry(texto_norm):
     if not texto_norm:
@@ -2256,10 +2320,14 @@ REGRAS ABSOLUTAS
 - Nunca use em contexto negativo: 😊 😄 🙂 😍 🥰 ❤️ 🤗
 
 EXEMPLOS DE TOM
-- Reclamação: "Sinto muito por essa fila. Já deixei seu relato registrado para acompanhamento."
-- Confirmação: "Perfeito, já deixei sua mensagem registrada para acompanhamento ✅"
-- Elogio: "Que bom receber isso. Obrigado por contar pra gente 😊"
-- Agradecimento do cliente: "Eu que agradeço. Se quiser, pode me contar mais detalhes."
+- Reclamação (primeira mensagem): "Poxa, que situação chata. Já registrei aqui para a equipe acompanhar."
+- Reclamação (segunda mensagem, cliente reforça): "Entendo a frustração. Esse ponto ficou marcado com atenção — a equipe vai ver."
+- Reclamação (cliente claramente irritado): "Faz sentido estar irritado com isso. Já sinalizei como urgente."
+- Confirmação: "Tudo certo, já está no registro ✅"
+- Elogio: "Que bom ouvir isso. Obrigado por contar 😊"
+- Agradecimento do cliente: "Eu que agradeço. Pode mandar mais se precisar."
+- Cliente só agradece: "Fico feliz em ajudar."
+- Sugestão: "Boa ideia, já deixei anotado para a equipe."
 
 {build_food_safety_prompt_block()}
 
@@ -2277,27 +2345,27 @@ def generate_promocoes_response(text=""):
     formatted_week = format_promotions_text(week_text) if has_week else ""
 
     if not day_text and not has_week:
-        return "Ainda nÃ£o recebi as promoÃ§Ãµes atualizadas. Se quiser, jÃ¡ deixo sua mensagem registrada para a equipe conferir."
+        return "Ainda não recebi as promoções atualizadas. Se quiser, já deixo sua mensagem registrada para a equipe conferir."
 
     wants_today = any(keyword in normalized_text for keyword in ('hoje', 'do dia', 'de hoje'))
     wants_week = any(keyword in normalized_text for keyword in ('semana', 'da semana', 'encarte'))
 
     if wants_today and day_text:
-        return f"*PromoÃ§Ãµes de hoje no {MARKET_NAME}:*\n{formatted_day}"
+        return f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}"
 
     if wants_week and has_week:
-        return f"*PromoÃ§Ãµes da semana no {MARKET_NAME}:*\n{formatted_week}"
+        return f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
 
     if day_text and has_week:
         return (
-            f"*PromoÃ§Ãµes de hoje no {MARKET_NAME}:*\n{formatted_day}\n\n"
-            f"*PromoÃ§Ãµes da semana no {MARKET_NAME}:*\n{formatted_week}"
+            f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}\n\n"
+            f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
         )
 
     if day_text:
-        return f"*PromoÃ§Ãµes de hoje no {MARKET_NAME}:*\n{formatted_day}"
+        return f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}"
 
-    return f"*PromoÃ§Ãµes da semana no {MARKET_NAME}:*\n{formatted_week}"
+    return f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
 
 def generate_pergunta_geral_response(text):
     """Responde perguntas gerais com o mesmo filtro de tom e emoji do Seu Pipico."""
@@ -2415,10 +2483,13 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
     conversation_entries = conversation_entries or []
     has_followup_context = has_feedback_followup_context(conversation_entries)
     recent_context = format_recent_conversation_for_prompt(conversation_entries)
+    escalacao = detect_emotional_escalation(conversation_entries)
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        if has_followup_context:
+        if escalacao == 'escalando':
+            reply = "Entendo, e é muito chato que isso continue acontecendo. Vou deixar marcado como prioridade para a equipe ver."
+        elif has_followup_context:
             reply = build_followup_feedback_reply(text, category, urgency)
         elif urgency == "Positivo":
             reply = "Que bom receber isso. Obrigado por contar pra gente."
@@ -2427,6 +2498,14 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
         else:
             reply = "Obrigado por me contar. Ja deixei seu registro salvo para acompanhamento."
         return finalize_marcia_reply(reply, urgency, category, text)
+
+    # Bloco de instrução adicional para escalada emocional
+    instrucao_escalada = ""
+    if escalacao == 'escalando':
+        instrucao_escalada = """
+- ATENÇÃO: o cliente está progressivamente mais irritado. Não use o mesmo tom de resposta padrão.
+  Reconheça explicitamente que a situação piorou, mostre que entendeu a gravidade,
+  e diga que vai sinalizar com urgência — sem prometer ação que você não pode confirmar."""
 
     try:
         from openai import OpenAI
@@ -2449,7 +2528,7 @@ Gere uma resposta curta de {AGENT_NAME}.
 - Se houver concorrente citado, reconheca a comparacao com respeito
 - Se o cliente so agradecer, responda com algo simples e natural
 - Nao invente solucao ja executada
-- Evite repetir "ja deixei seu relato registrado para acompanhamento" se isso ja foi dito na ultima resposta'''
+- Evite repetir "ja deixei seu relato registrado para acompanhamento" se isso ja foi dito na ultima resposta{instrucao_escalada}'''
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -2457,7 +2536,7 @@ Gere uma resposta curta de {AGENT_NAME}.
                 {"role": "user", "content": user_msg}
             ],
             max_tokens=120,
-            temperature=0.45
+            temperature=0.65
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -2928,23 +3007,23 @@ def _legacy_process_context_followup_corrupted(remote_jid, push_name, text):
             return {"reply": "Tudo bem. Se quiser retomar depois, eu sigo com vocÃª por aqui.", "status": "context_cancelled"}
 
         if is_affirmative(text):
-            return {"reply": "Me diz sÃ³ qual produto especÃ­fico estava mais barato lÃ¡, por favor.", "status": "awaiting_competitor_product"}
+            return {"reply": "Me diz só qual produto específico estava mais barato lá, por favor.", "status": "awaiting_competitor_product"}
 
         product = extract_competitor_product_followup(text)
         if not product and looks_like_new_turn(text):
             clear_context(remote_jid)
             return None
         if not product:
-            return {"reply": "Me diz sÃ³ qual produto especÃ­fico ficou mais barato lÃ¡, por favor.", "status": "awaiting_competitor_product"}
+            return {"reply": "Me diz só qual produto específico ficou mais barato lá, por favor.", "status": "awaiting_competitor_product"}
 
         updated_conversation = append_conversation_entry(data.get('message', ''), 'client', text)
         save_context(remote_jid, 'awaiting_registration_confirmation', {
             "message": updated_conversation,
-            "force_category": "PromoÃ§Ã£o",
+            "force_category": "Promoção",
             "topic": product
         })
         return {
-            "reply": f"Perfeito, entendi que foi sobre {product}. Quer que eu deixe isso registrado para anÃ¡lise da equipe?",
+            "reply": f"Perfeito, entendi que foi sobre {product}. Quer que eu deixe isso registrado para análise da equipe?",
             "status": "awaiting_registration_confirmation"
         }
 
@@ -2960,15 +3039,15 @@ def _legacy_process_context_followup_corrupted(remote_jid, push_name, text):
             )
             clear_context(remote_jid)
             return {
-                "reply": "Perfeito, jÃ¡ deixei sua mensagem registrada para acompanhamento âœ…",
+                "reply": "Perfeito, já deixei sua mensagem registrada para acompanhamento ✅",
                 "status": "feedback_registered",
                 "result": result
             }
         if is_negative_reply(text):
             clear_context(remote_jid)
-            return {"reply": "Certo, nÃ£o vou registrar agora. Se quiser depois, Ã© sÃ³ me avisar.", "status": "registration_declined"}
+            return {"reply": "Certo, não vou registrar agora. Se quiser depois, é só me avisar.", "status": "registration_declined"}
         return {
-            "reply": "Se vocÃª quiser que eu registre, pode me responder sÃ³ com sim ou nÃ£o.",
+            "reply": "Se você quiser que eu registre, pode me responder só com sim ou não.",
             "status": "awaiting_registration_confirmation"
         }
 
@@ -2982,21 +3061,21 @@ def _legacy_process_feedback_message_corrupted(remote_jid, push_name, text):
     if competitor_price_signal and not topic:
         save_context(remote_jid, 'awaiting_competitor_product', {
             "message": build_feedback_message(text),
-            "force_category": "PromoÃ§Ã£o"
+            "force_category": "Promoção"
         })
         return {
-            "reply": "Entendi, e essa comparaÃ§Ã£o ajuda bastante a gente. Qual produto especÃ­fico estava mais barato lÃ¡?",
+            "reply": "Entendi, e essa comparação ajuda bastante a gente. Qual produto específico estava mais barato lá?",
             "status": "awaiting_competitor_product"
         }
 
     if competitor_price_signal and topic:
         save_context(remote_jid, 'awaiting_registration_confirmation', {
             "message": build_feedback_message(text),
-            "force_category": "PromoÃ§Ã£o",
+            "force_category": "Promoção",
             "topic": topic
         })
         return {
-            "reply": f"Entendi, e essa comparaÃ§Ã£o ajuda bastante a gente. Quer que eu deixe isso registrado para anÃ¡lise da equipe? Produto citado: {topic}.",
+            "reply": f"Entendi, e essa comparação ajuda bastante a gente. Quer que eu deixe isso registrado para análise da equipe? Produto citado: {topic}.",
             "status": "awaiting_registration_confirmation"
         }
 
@@ -3371,7 +3450,7 @@ def export_json():
 def update_feedback_status(feedback_id):
     feedback = get_feedback_by_id(feedback_id)
     if not feedback:
-        return jsonify({"error": "Feedback nÃ£o encontrado"}), 404
+        return jsonify({"error": "Feedback não encontrado"}), 404
     data = request.json
     new_status = data.get('status')
     if new_status not in ['aberto', 'em_andamento', 'resolvido']:
@@ -3392,7 +3471,7 @@ def update_feedback_status(feedback_id):
 def toggle_feedback_handoff(feedback_id):
     feedback = get_feedback_by_id(feedback_id)
     if not feedback:
-        return jsonify({"error": "Feedback nÃ£o encontrado"}), 404
+        return jsonify({"error": "Feedback não encontrado"}), 404
 
     data = request.json or {}
     enabled = bool(data.get('enabled'))
@@ -3983,7 +4062,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         if produto_nome:
             query = produto_nome
         else:
-            query = re.sub(r'^(quanto custa|qual o preÃ§o d[aoe]|preÃ§o d[aoe]|valor d[aoe]|tem |vocÃªs tem|voces tem|vcs tem|quanto t[aÃ¡]\s+[aoe]|quanto [eÃ©]\s+[aoe])\s*', '', text.lower()).strip().rstrip('?')
+            query = re.sub(r'^(quanto custa|qual o preço d[aoe]|preço d[aoe]|valor d[aoe]|tem |vocês tem|voces tem|vcs tem|quanto t[aá]\s+[aoe]|quanto [eé]\s+[aoe])\s*', '', text.lower()).strip().rstrip('?')
         print(f"ðŸ›’ [PRODUCT] Searching for: {query}")
         results = buscar_produto_local(query)
         reply = generate_product_response(text, results)
@@ -4071,16 +4150,16 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
                     resp = client.chat.completions.create(
                         model="gpt-4o-mini",
-                        messages=[{"role": "system", "content": f'''VocÃª Ã© {AGENT_NAME}, atendente do supermercado. O cliente enviou mais uma mensagem complementando o que disse antes.
+                        messages=[{"role": "system", "content": f'''Você é {AGENT_NAME}, atendente do supermercado. O cliente enviou mais uma mensagem complementando o que disse antes.
                                     MENSAGEM NOVA: "{text}"
-                                    SEJA BREVE (MÃ¡ximo 1 frase). Confirme que anotou a informaÃ§Ã£o.
-                                    Use emoji apenas se combinar com o contexto. Nunca use emoji sorrindo em reclamaÃ§Ã£o.'''}],
+                                    SEJA BREVE (Máximo 1 frase). Confirme que anotou a informação.
+                                    Use emoji apenas se combinar com o contexto. Nunca use emoji sorrindo em reclamação.'''}],
                         max_tokens=60,
                         timeout=15
                     )
                     reply = resp.choices[0].message.content.strip()
                 except:
-                    reply = "Anotado. JÃ¡ adicionei essa informaÃ§Ã£o ao seu atendimento."
+                    reply = "Anotado. Já adicionei essa informação ao seu atendimento."
 
                 reply = finalize_marcia_reply(reply, update_urgency or sentimento, categoria, text)
                 send_whatsapp_message(remote_jid, reply)
