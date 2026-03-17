@@ -585,15 +585,25 @@ def get_weekly_promotions():
     return DEFAULT_PROMOTIONS_EMPTY_TEXT
 
 def format_promotions_text(raw_text):
+    """Formata cada linha de promoção com bullet limpo e preço em negrito."""
     lines = []
     for raw_line in (raw_text or "").splitlines():
         line = raw_line.strip()
         if not line:
             continue
-        if re.match(r"^([\-*•]|[0-9]+[.)])\s+", line):
-            lines.append(line)
-        else:
-            lines.append(f"• {line}")
+        # Remove bullet já existente para reprocessar de forma uniforme
+        line = re.sub(r"^([\-*•]|[0-9]+[.):])\s*", "", line).strip()
+        if not line:
+            continue
+        # Coloca o preço em negrito: R$4,99 ou R$ 4,99 → *R$ 4,99*
+        line = re.sub(
+            r"R\$\s*(\d[\d.,]*)",
+            lambda m: f"*R$ {m.group(1)}*",
+            line
+        )
+        # Adiciona travessão antes do preço se ainda não houver separador
+        line = re.sub(r"(?<![-—])\s+(\*R\$)", r" — \1", line)
+        lines.append(f"• {line}")
     return "\n".join(lines)
 
 def build_promotions_prompt_block():
@@ -2351,21 +2361,21 @@ def generate_promocoes_response(text=""):
     wants_week = any(keyword in normalized_text for keyword in ('semana', 'da semana', 'encarte'))
 
     if wants_today and day_text:
-        return f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}"
+        return f"🛒 *Promoções de hoje no {MARKET_NAME}:*\n\n{formatted_day}"
 
     if wants_week and has_week:
-        return f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
+        return f"🛒 *Promoções da semana no {MARKET_NAME}:*\n\n{formatted_week}"
 
     if day_text and has_week:
         return (
-            f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}\n\n"
-            f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
+            f"🛒 *Promoções de hoje no {MARKET_NAME}:*\n\n{formatted_day}\n\n"
+            f"🛒 *Promoções da semana no {MARKET_NAME}:*\n\n{formatted_week}"
         )
 
     if day_text:
-        return f"*Promoções de hoje no {MARKET_NAME}:*\n{formatted_day}"
+        return f"🛒 *Promoções de hoje no {MARKET_NAME}:*\n\n{formatted_day}"
 
-    return f"*Promoções da semana no {MARKET_NAME}:*\n{formatted_week}"
+    return f"🛒 *Promoções da semana no {MARKET_NAME}:*\n\n{formatted_week}"
 
 def generate_pergunta_geral_response(text):
     """Responde perguntas gerais com o mesmo filtro de tom e emoji do Seu Pipico."""
