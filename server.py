@@ -115,6 +115,20 @@ GENERAL_QUESTION_HINTS_NORMALIZED = (
     'contato', 'funciona', 'abre', 'fecha', 'domingo', 'sabado'
 )
 
+# Horário de funcionamento — ajuste aqui se mudar
+STORE_OPEN_HOUR = 7
+STORE_OPEN_MINUTE = 30
+STORE_CLOSE_HOUR = 19
+STORE_CLOSE_MINUTE = 30
+STORE_OPEN_DAYS = (0, 1, 2, 3, 4, 5)  # 0=Segunda, 6=Domingo
+STORE_HOURS_TEXT = 'Segunda a Sábado, das 7h30 às 19h30'
+
+HORARIO_KEYWORDS = (
+    'horario', 'horário', 'que horas', 'que hora', 'funciona', 'abre', 'fecha',
+    'aberto', 'fechado', 'funcionamento', 'expediente', 'atende', 'abre que horas',
+    'fecha que horas', 'domingo', 'sabado', 'sábado', 'feriado'
+)
+
 MILD_PROFANITY_PATTERNS = (
     'porra', 'caralho', 'cacete', 'merda', 'puta merda', 'inferno', 'droga', 'desgraca'
 )
@@ -1224,6 +1238,43 @@ def get_lista_espera_count():
             return []
     return []
 
+# --- STORE HOURS FUNCTIONS ---
+
+def is_store_open():
+    """Verifica se o mercado está aberto agora com base no horário configurado."""
+    from datetime import datetime
+    import pytz
+    try:
+        tz = pytz.timezone('America/Sao_Paulo')
+        now = datetime.now(tz)
+    except Exception:
+        now = datetime.now()
+    if now.weekday() not in STORE_OPEN_DAYS:
+        return False
+    open_time = now.replace(hour=STORE_OPEN_HOUR, minute=STORE_OPEN_MINUTE, second=0)
+    close_time = now.replace(hour=STORE_CLOSE_HOUR, minute=STORE_CLOSE_MINUTE, second=0)
+    return open_time <= now <= close_time
+
+def generate_horario_response(text=''):
+    """Responde perguntas sobre horário de funcionamento do mercado."""
+    text_norm = normalize_text(text or '')
+    aberto_agora = is_store_open()
+    status = 'estamos abertos agora' if aberto_agora else 'estamos fechados no momento'
+
+    if any(p in text_norm for p in ('domingo', 'feriado')):
+        return f'Aos domingos e feriados não abrimos. Funcionamos {STORE_HOURS_TEXT}.'
+
+    return (
+        f'Funcionamos {STORE_HOURS_TEXT}. '
+        f'Agora {status}. '
+        f'Se precisar de algo, pode me contar aqui!'
+    )
+
+def is_horario_question(text):
+    """Detecta se a mensagem é uma pergunta sobre horário de funcionamento."""
+    norm = normalize_text(text or '')
+    return any(k in norm for k in HORARIO_KEYWORDS)
+
 # --- CLASSIFICATION FUNCTIONS ---
 
 def classificar_sentimento(texto):
@@ -1977,6 +2028,9 @@ def detectar_intencao(texto):
     if looks_like_product_inquiry(texto_norm):
         return 'consulta_indisponivel'
 
+    if is_horario_question(texto):
+        return 'horario'
+
     if '?' in texto and any(p in texto_norm for p in GENERAL_QUESTION_HINTS_NORMALIZED):
         return 'pergunta_geral'
 
@@ -2527,7 +2581,7 @@ Gere uma resposta curta de {AGENT_NAME}.
             reply = "Obrigado por me contar. Já deixei seu registro salvo para acompanhamento."
         return finalize_marcia_reply(reply, urgency, category, text)
 
-def generate_ai_response(text, category, urgency, conversation_entries=None):
+def generate_ai_response(text, category, urgency, conversation_entries=None, remote_jid=None):
     """Versao final contextual do Seu Pipico, evitando repeticao em follow-up."""
     if is_agent_identity_question(text):
         return "Eu sou o Seu Pipico, atendimento do Atacaforte."
@@ -2539,6 +2593,11 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
     has_followup_context = has_feedback_followup_context(conversation_entries)
     recent_context = format_recent_conversation_for_prompt(conversation_entries)
     escalacao = detect_emotional_escalation(conversation_entries)
+
+    # Contexto de cliente recorrente
+    historico_ctx = build_returning_client_context(remote_jid, category) if remote_jid else {'is_returning': False}
+    if historico_ctx.get('extra_urgency') and urgency not in ('Critico',):
+        urgency = 'Urgente'  # Eleva urgência se mesmo problema foi reportado antes
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -2562,6 +2621,15 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
   Reconheça explicitamente que a situação piorou, mostre que entendeu a gravidade,
   e diga que vai sinalizar com urgência — sem prometer ação que você não pode confirmar."""
 
+    # Bloco de instrução para cliente recorrente
+    instrucao_recorrente = ""
+    if historico_ctx.get('same_issue') and historico_ctx.get('count', 0) >= 2:
+        instrucao_recorrente = f"""
+- IMPORTANTE: esse cliente já nos relatou situações parecidas antes ({historico_ctx['count']} vezes).
+  Reconheça isso de forma genuína, sem ser mecânico. Mostre que levamos a sério e que
+  o histórico dele foi notado. Ex: 'Sei que não é a primeira vez que isso acontece com você.'
+  Não prometa solução que não pode confirmar."""
+
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
@@ -2583,7 +2651,7 @@ Gere uma resposta curta de {AGENT_NAME}.
 - Se houver concorrente citado, reconheca a comparacao com respeito
 - Se o cliente so agradecer, responda com algo simples e natural
 - Nao invente solucao ja executada
-- Evite repetir "ja deixei seu relato registrado para acompanhamento" se isso ja foi dito na ultima resposta{instrucao_escalada}'''
+- Evite repetir "ja deixei seu relato registrado para acompanhamento" se isso ja foi dito na ultima resposta{instrucao_escalada}{instrucao_recorrente}'''
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -2901,6 +2969,24 @@ def process_context_followup(remote_jid, push_name, text):
             "status": "awaiting_registration_confirmation"
         }
 
+    if state == 'awaiting_atendimento_detail':
+        # Cliente respondeu com o detalhe do setor/caixa — enriquece o feedback
+        if is_conversation_wrap_up(text) or is_customer_thank_you_message(text):
+            clear_context(remote_jid)
+            return {'reply': 'Tudo certo. Obrigado por nos contar!', 'status': 'detail_skipped'}
+        feedback_id = data.get('feedback_id')
+        if feedback_id:
+            fb = get_feedback_by_id(feedback_id)
+            if fb:
+                detail_note = f'Detalhe informado pelo cliente: {text}'
+                updated_msg = append_conversation_entry(fb.get('message', ''), 'client', detail_note)
+                update_feedback(feedback_id, {'message': updated_msg, 'updated_at': datetime.utcnow().isoformat()})
+        clear_context(remote_jid)
+        return {
+            'reply': 'Anotado, obrigado pelo detalhe. Vai ajudar muito a equipe a resolver! ✅',
+            'status': 'atendimento_detail_recorded'
+        }
+
     if state == 'awaiting_registration_confirmation':
         if is_customer_thank_you_message(text):
             clear_context(remote_jid)
@@ -2935,6 +3021,49 @@ def process_context_followup(remote_jid, push_name, text):
         }
 
     return None
+
+def get_sender_feedback_history(remote_jid):
+    """Retorna feedbacks anteriores do mesmo número, excluindo o mais recente."""
+    try:
+        feedbacks = get_feedbacks()
+        historico = [
+            fb for fb in feedbacks
+            if fb.get('sender') == remote_jid
+        ]
+        # Ordena do mais antigo para o mais recente
+        historico.sort(key=lambda x: x.get('timestamp', ''), reverse=False)
+        return historico
+    except Exception:
+        return []
+
+def build_returning_client_context(remote_jid, new_category):
+    """Verifica se o cliente é recorrente e monta instrução extra para o prompt.
+
+    Retorna um dicionário com:
+    - is_returning: bool
+    - same_issue: bool (reclamou do mesmo tipo de problema antes)
+    - count: quantas vezes já entrou em contato
+    - extra_urgency: se deve elevar urgência
+    """
+    historico = get_sender_feedback_history(remote_jid)
+    if not historico:
+        return {'is_returning': False, 'same_issue': False, 'count': 0, 'extra_urgency': False}
+
+    count = len(historico)
+    categorias_anteriores = [fb.get('category', '').lower() for fb in historico]
+    same_issue = any(
+        (new_category or '').lower() in cat or cat in (new_category or '').lower()
+        for cat in categorias_anteriores
+        if cat
+    )
+    # Eleva urgência se mesmo problema foi reportado 2+ vezes
+    extra_urgency = same_issue and count >= 2
+    return {
+        'is_returning': True,
+        'same_issue': same_issue,
+        'count': count,
+        'extra_urgency': extra_urgency
+    }
 
 def process_feedback_message(remote_jid, push_name, text):
     concorrentes = detectar_concorrentes(text)
@@ -2977,7 +3106,23 @@ def process_feedback_message(remote_jid, push_name, text):
 
     result = persist_feedback_message(remote_jid, push_name, text)
     conversation_entries = parse_feedback_conversation(result.get("message", ""))
-    reply = generate_ai_response(text, result["category"], result["urgency"], conversation_entries=conversation_entries)
+    reply = generate_ai_response(text, result["category"], result["urgency"], conversation_entries=conversation_entries, remote_jid=remote_jid)
+
+    # Coleta de detalhe acionável: se reclamação de atendimento e sem detalhe de local,
+    # pergunta em qual caixa ou setor aconteceu
+    categoria_lower = (result.get('category') or '').lower()
+    eh_reclamacao_atendimento = (
+        result.get('urgency') in ('Urgente', 'Critico')
+        and any(p in categoria_lower for p in ('atendimento', 'funcionario', 'caixa', 'colaborador'))
+    )
+    tem_detalhe = any(p in normalize_text(text) for p in (
+        'caixa', 'setor', 'padaria', 'acougue', 'açougue', 'hortifruti',
+        'loja', 'balcao', 'balcão', 'numero', 'número'
+    ))
+    if eh_reclamacao_atendimento and not tem_detalhe and result.get('id'):
+        save_context(remote_jid, 'awaiting_atendimento_detail', {'feedback_id': result['id']})
+        reply = reply + '\n\nPode me dizer em qual caixa ou setor isso aconteceu? Vai ajudar a equipe a identificar e resolver mais rápido.'
+
     return {"reply": reply, "status": "feedback_processed", "result": result}
 
 def _legacy_persist_feedback_message_corrupted(remote_jid, push_name, text, forced_category=None, forced_topic=None):
@@ -4125,7 +4270,12 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     intencao = detectar_intencao(text)
     print(f"ðŸ” [INTENT] {intencao}: {text[:50]}")
 
-    if intencao == 'consulta_indisponivel':
+    if intencao == 'horario':
+        reply = generate_horario_response(text)
+        send_whatsapp_message(remote_jid, reply)
+        return jsonify({'status': 'horario_sent'}), 200
+
+    elif intencao == 'consulta_indisponivel':
         reply = generate_unavailable_product_response()
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "product_unavailable_scope"}), 200
