@@ -1,7 +1,13 @@
 -- ============================================
+-- ⚠️  ATENÇÃO — APENAS PARA DEMONSTRAÇÃO ⚠️
+-- NÃO RODAR EM PRODUÇÃO!
+-- Este arquivo apaga todos os dados reais e
+-- insere dados falsos (produtos, feedbacks, preços).
+-- Use SOMENTE para apresentar o sistema a clientes.
+-- Para produção, use o arquivo seed.sql.
+-- ============================================
 -- DEMO DATA - ATACAFORTE SUPERMERCADOS
 -- Horário: 08:00 às 19:30
--- Rodar no Supabase SQL Editor (supermercados)
 -- ============================================
 -- Limpar dados anteriores (preserva estrutura)
 DELETE FROM lista_espera;

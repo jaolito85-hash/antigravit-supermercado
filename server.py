@@ -70,8 +70,8 @@ SENDER_LOCKS_DIR = 'execution/sender_locks'
 SENDER_LOCK_TIMEOUT_SECONDS = 45
 SENDER_LOCK_STALE_SECONDS = 120
 SENDER_LOCK_POLL_SECONDS = 0.2
-MARKET_NAME = "Atacaforte"
-AGENT_NAME = "Seu Pipico"
+MARKET_NAME = os.getenv("MARKET_NAME", "Supermercado")
+AGENT_NAME = os.getenv("AGENT_NAME", "Seu Pipico")
 DEFAULT_PROMOTIONS_EMPTY_TEXT = "No momento eu ainda não recebi as promoções atualizadas."
 PROMOTION_DAY_TYPE = "promotion_day"
 PROMOTION_WEEK_TYPE = "promotion_week"
@@ -2042,7 +2042,7 @@ def detectar_intencao(texto):
         try:
             from openai import OpenAI
             client = OpenAI(api_key=api_key)
-            system_msg = '''Classifique a intenção de mensagens recebidas no WhatsApp do supermercado Atacaforte.
+            system_msg = f'''Classifique a intenção de mensagens recebidas no WhatsApp do supermercado {MARKET_NAME}.
 Você deve escolher APENAS uma destas intenções:
 - promocoes: pergunta sobre ofertas, promoções ou encarte da semana
 - consulta_indisponivel: pergunta sobre preço, estoque, disponibilidade, chegada ou retorno de produto
@@ -4150,6 +4150,21 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     if restriction:
         send_whatsapp_message(remote_jid, restriction["reply"])
         return jsonify({"status": restriction["status"]}), 200
+
+    # --- BOAS-VINDAS QR CODE ---
+    # Detecta a mensagem automática gerada pelo QR Code de feedback.
+    # Quando o cliente escaneia o QR, o WhatsApp abre com uma mensagem pré-preenchida
+    # contendo "vim pelo qr code". Aqui interceptamos esse texto para dar boas-vindas
+    # antes de qualquer processamento — o feedback de verdade virá na próxima mensagem.
+    if "vim pelo qr code" in text.lower():
+        boas_vindas = (
+            "Olá! Aqui é o Seu Pipico, do Atacaforte! Que bom ter você aqui! "
+            "Pode falar à vontade — sua opinião é o que faz a gente melhorar. "
+            "O que você achou da sua visita? 🛒"
+        )
+        send_whatsapp_message(remote_jid, boas_vindas)
+        print(f"[QR-WELCOME] Boas-vindas enviadas para {remote_jid}")
+        return jsonify({"status": "qr_welcome_sent"}), 200
 
     if len(text.strip()) < MIN_MESSAGE_LENGTH:
         return jsonify({"status": "ignored_too_short"}), 200
