@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"c:\\\\Users\\\\Joao Marcos\\\\antigravit-supermercado\\\\execution\"\" | grep -E \".sql)",
+      "Bash(.py \")"
+    ]
+  }
+}

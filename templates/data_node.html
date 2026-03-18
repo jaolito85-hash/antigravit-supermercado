@@ -853,8 +853,32 @@
         /* --- BANNER DE PROMOÇÃO --- */
         .banner-section {
             margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .banner-section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: -8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .banner-grid-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .banner-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
         }
 
@@ -967,7 +991,8 @@
         }
 
         @media (max-width: 768px) {
-            .banner-section {
+            .banner-grid-2,
+            .banner-grid-3 {
                 grid-template-columns: 1fr;
             }
         }
@@ -1856,60 +1881,183 @@
                 <!-- BANNERS DE PROMOÇÃO -->
                 <div class="banner-section">
 
-                    <!-- BANNER DO DIA -->
-                    <div class="banner-card">
-                        <div class="banner-card-header">
-                            <i class="ri-sun-line"></i> Banner do dia
-                        </div>
-                        <p class="banner-card-caption">
-                            Quando ativo, o Seu Pipico envia essa imagem no lugar do texto ao receber qualquer pergunta sobre promoções de hoje.
-                        </p>
-                        <div class="banner-preview-box" id="banner-day-box">
-                            <img id="banner-day-img" src="" alt="Banner do dia" />
-                            <div class="banner-empty-label" id="banner-day-empty">
-                                <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
-                                Nenhum banner ativo
+                    <!-- ENCARTES MENSAIS -->
+                    <div class="banner-section-title">
+                        <i class="ri-calendar-2-line"></i> Encartes Mensais
+                        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;margin-left:4px;">— válidos o mês inteiro</span>
+                    </div>
+                    <div class="banner-grid-2">
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-file-list-3-line"></i> Encarte Geral</div>
+                            <p class="banner-card-caption">Folheto principal com todas as ofertas do mês.</p>
+                            <div class="banner-preview-box" id="banner-banner_monthly_geral-box">
+                                <img id="banner-banner_monthly_geral-img" src="" alt="Encarte Geral" />
+                                <div class="banner-empty-label" id="banner-banner_monthly_geral-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
                             </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_monthly_geral-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_monthly_geral-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_monthly_geral', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_monthly_geral')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_monthly_geral-status"></div>
                         </div>
-                        <div class="banner-actions">
-                            <label class="banner-upload-label" for="banner-day-input">
-                                <i class="ri-upload-cloud-2-line"></i> Enviar imagem
-                                <input type="file" id="banner-day-input" accept="image/*" hidden
-                                    onchange="uploadBanner('day', this)">
-                            </label>
-                            <button class="banner-delete-btn" onclick="deleteBanner('day')">
-                                <i class="ri-delete-bin-line"></i> Remover
-                            </button>
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-goblet-line"></i> Bebidas</div>
+                            <p class="banner-card-caption">Encarte de bebidas do mês.</p>
+                            <div class="banner-preview-box" id="banner-banner_monthly_bebidas-box">
+                                <img id="banner-banner_monthly_bebidas-img" src="" alt="Bebidas" />
+                                <div class="banner-empty-label" id="banner-banner_monthly_bebidas-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
+                            </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_monthly_bebidas-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_monthly_bebidas-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_monthly_bebidas', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_monthly_bebidas')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_monthly_bebidas-status"></div>
                         </div>
-                        <div class="banner-status" id="banner-day-status"></div>
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-restaurant-line"></i> Food Service</div>
+                            <p class="banner-card-caption">Encarte de food service do mês.</p>
+                            <div class="banner-preview-box" id="banner-banner_monthly_food-box">
+                                <img id="banner-banner_monthly_food-img" src="" alt="Food Service" />
+                                <div class="banner-empty-label" id="banner-banner_monthly_food-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
+                            </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_monthly_food-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_monthly_food-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_monthly_food', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_monthly_food')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_monthly_food-status"></div>
+                        </div>
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-price-tag-3-line"></i> Outros</div>
+                            <p class="banner-card-caption">4º encarte mensal (use como preferir).</p>
+                            <div class="banner-preview-box" id="banner-banner_monthly_outros-box">
+                                <img id="banner-banner_monthly_outros-img" src="" alt="Outros" />
+                                <div class="banner-empty-label" id="banner-banner_monthly_outros-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
+                            </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_monthly_outros-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_monthly_outros-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_monthly_outros', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_monthly_outros')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_monthly_outros-status"></div>
+                        </div>
+
                     </div>
 
-                    <!-- BANNER DA SEMANA -->
-                    <div class="banner-card">
-                        <div class="banner-card-header">
-                            <i class="ri-calendar-event-line"></i> Banner da semana
-                        </div>
-                        <p class="banner-card-caption">
-                            Use para encarte ou campanha semanal. Quando ativo, o Seu Pipico envia essa imagem ao receber qualquer pergunta sobre promoções.
-                        </p>
-                        <div class="banner-preview-box" id="banner-week-box">
-                            <img id="banner-week-img" src="" alt="Banner da semana" />
-                            <div class="banner-empty-label" id="banner-week-empty">
-                                <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
-                                Nenhum banner ativo
+                    <!-- ENCARTES DIÁRIOS -->
+                    <div class="banner-section-title">
+                        <i class="ri-sun-line"></i> Encartes Diários
+                        <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.78rem;margin-left:4px;">— atualizam por período da semana</span>
+                    </div>
+                    <div class="banner-grid-3">
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-calendar-check-line"></i> Segunda &amp; Terça</div>
+                            <p class="banner-card-caption">Folheto válido na segunda e terça-feira.</p>
+                            <div class="banner-preview-box" id="banner-banner_daily_seg_ter-box">
+                                <img id="banner-banner_daily_seg_ter-img" src="" alt="Seg/Ter" />
+                                <div class="banner-empty-label" id="banner-banner_daily_seg_ter-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
                             </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_daily_seg_ter-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_daily_seg_ter-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_daily_seg_ter', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_daily_seg_ter')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_daily_seg_ter-status"></div>
                         </div>
-                        <div class="banner-actions">
-                            <label class="banner-upload-label" for="banner-week-input">
-                                <i class="ri-upload-cloud-2-line"></i> Enviar imagem
-                                <input type="file" id="banner-week-input" accept="image/*" hidden
-                                    onchange="uploadBanner('week', this)">
-                            </label>
-                            <button class="banner-delete-btn" onclick="deleteBanner('week')">
-                                <i class="ri-delete-bin-line"></i> Remover
-                            </button>
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-calendar-check-line"></i> Quarta &amp; Quinta</div>
+                            <p class="banner-card-caption">Folheto válido na quarta e quinta-feira.</p>
+                            <div class="banner-preview-box" id="banner-banner_daily_qua_qui-box">
+                                <img id="banner-banner_daily_qua_qui-img" src="" alt="Qua/Qui" />
+                                <div class="banner-empty-label" id="banner-banner_daily_qua_qui-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
+                            </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_daily_qua_qui-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_daily_qua_qui-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_daily_qua_qui', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_daily_qua_qui')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_daily_qua_qui-status"></div>
                         </div>
-                        <div class="banner-status" id="banner-week-status"></div>
+
+                        <div class="banner-card">
+                            <div class="banner-card-header"><i class="ri-calendar-check-line"></i> Sexta &amp; Sábado</div>
+                            <p class="banner-card-caption">Folheto válido na sexta, sábado e domingo.</p>
+                            <div class="banner-preview-box" id="banner-banner_daily_sex_sab-box">
+                                <img id="banner-banner_daily_sex_sab-img" src="" alt="Sex/Sab" />
+                                <div class="banner-empty-label" id="banner-banner_daily_sex_sab-empty">
+                                    <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                    Nenhum encarte ativo
+                                </div>
+                            </div>
+                            <div class="banner-actions">
+                                <label class="banner-upload-label" for="banner-banner_daily_sex_sab-input">
+                                    <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                    <input type="file" id="banner-banner_daily_sex_sab-input" accept="image/*" hidden
+                                        onchange="uploadBanner('banner_daily_sex_sab', this)">
+                                </label>
+                                <button type="button" class="banner-delete-btn" onclick="deleteBanner('banner_daily_sex_sab')">
+                                    <i class="ri-delete-bin-line"></i> Remover
+                                </button>
+                            </div>
+                            <div class="banner-status" id="banner-banner_daily_sex_sab-status"></div>
+                        </div>
+
                     </div>
 
                 </div>
@@ -2593,13 +2741,18 @@
             }
         }
 
+        const ALL_BANNER_TYPES = [
+            'banner_monthly_geral', 'banner_monthly_bebidas',
+            'banner_monthly_food', 'banner_monthly_outros',
+            'banner_daily_seg_ter', 'banner_daily_qua_qui', 'banner_daily_sex_sab'
+        ];
+
         async function loadBanners() {
             // Carrega os banners ativos ao abrir a aba de Promoções
             try {
                 const res = await fetch('/api/banners');
                 const data = await res.json();
-                setBannerPreview('day', data.day || '');
-                setBannerPreview('week', data.week || '');
+                ALL_BANNER_TYPES.forEach(type => setBannerPreview(type, data[type] || ''));
             } catch (e) {
                 console.warn('Erro ao carregar banners:', e);
             }

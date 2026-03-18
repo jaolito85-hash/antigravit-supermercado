@@ -93,9 +93,22 @@ AGENT_NAME = os.getenv("AGENT_NAME", "Seu Pipico")
 DEFAULT_PROMOTIONS_EMPTY_TEXT = "No momento eu ainda não recebi as promoções atualizadas."
 PROMOTION_DAY_TYPE = "promotion_day"
 PROMOTION_WEEK_TYPE = "promotion_week"
-BANNER_DAY_TYPE = "banner_day"
-BANNER_WEEK_TYPE = "banner_week"
 BANNER_BUCKET = "banners"
+
+# Encartes mensais (válidos o mês inteiro — 4 folhetos)
+BANNER_MONTHLY_GERAL   = "banner_monthly_geral"
+BANNER_MONTHLY_BEBIDAS = "banner_monthly_bebidas"
+BANNER_MONTHLY_FOOD    = "banner_monthly_food"
+BANNER_MONTHLY_OUTROS  = "banner_monthly_outros"
+MONTHLY_BANNER_TYPES   = [BANNER_MONTHLY_GERAL, BANNER_MONTHLY_BEBIDAS, BANNER_MONTHLY_FOOD, BANNER_MONTHLY_OUTROS]
+
+# Encartes diários (mudam por período da semana)
+BANNER_DAILY_SEG_TER   = "banner_daily_seg_ter"
+BANNER_DAILY_QUA_QUI   = "banner_daily_qua_qui"
+BANNER_DAILY_SEX_SAB   = "banner_daily_sex_sab"
+DAILY_BANNER_TYPES     = [BANNER_DAILY_SEG_TER, BANNER_DAILY_QUA_QUI, BANNER_DAILY_SEX_SAB]
+
+ALL_BANNER_TYPES = MONTHLY_BANNER_TYPES + DAILY_BANNER_TYPES
 
 PROMO_KEYWORDS = (
     'oferta', 'ofertas', 'promocao', 'promocao da semana', 'promocao da semana',
@@ -607,23 +620,54 @@ def save_promotions_config(day_text, week_text):
     return local_config["promotions"]
 
 def get_banner_urls() -> dict:
-    """Retorna as URLs dos banners de promoção do dia e da semana armazenados no Supabase."""
+    """Retorna as URLs de todos os banners (mensais e diários) armazenados no Supabase."""
     sb = get_supabase()
-    result = {"day": "", "week": ""}
+    result = {t: "" for t in ALL_BANNER_TYPES}
     if not sb:
         return result
     try:
-        rows = sb.table('config').select('type,name').in_(
-            'type', [BANNER_DAY_TYPE, BANNER_WEEK_TYPE]
-        ).execute()
+        rows = sb.table('config').select('type,name').in_('type', ALL_BANNER_TYPES).execute()
         for row in (rows.data or []):
-            if row['type'] == BANNER_DAY_TYPE:
-                result["day"] = row.get('name', '')
-            elif row['type'] == BANNER_WEEK_TYPE:
-                result["week"] = row.get('name', '')
+            t = row.get('type')
+            if t in result:
+                result[t] = row.get('name', '')
     except Exception as e:
         print(f"Erro ao buscar URLs de banner: {e}")
     return result
+
+def get_monthly_banner_urls() -> list:
+    """Retorna lista de URLs dos banners mensais cadastrados (filtra vazios)."""
+    banners = get_banner_urls()
+    return [banners[t] for t in MONTHLY_BANNER_TYPES if banners.get(t)]
+
+def get_daily_banner_for_today() -> str:
+    """Retorna a URL do encarte diário correspondente ao dia da semana atual (horário de Brasília)."""
+    try:
+        import zoneinfo
+        tz_brasilia = zoneinfo.ZoneInfo("America/Sao_Paulo")
+        weekday = datetime.now(tz=tz_brasilia).weekday()  # 0=Seg, 6=Dom
+    except Exception:
+        from datetime import timezone as _tz
+        weekday = datetime.now(_tz.utc).weekday()
+
+    # Mapeia dia da semana para o tipo de banner correto
+    if weekday in (0, 1):          # Segunda, Terça
+        daily_type = BANNER_DAILY_SEG_TER
+    elif weekday in (2, 3):        # Quarta, Quinta
+        daily_type = BANNER_DAILY_QUA_QUI
+    else:                          # Sexta, Sábado, Domingo → usa Sex/Sab
+        daily_type = BANNER_DAILY_SEX_SAB
+
+    sb = get_supabase()
+    if not sb:
+        return ""
+    try:
+        row = sb.table('config').select('name').eq('type', daily_type).limit(1).execute()
+        if row.data:
+            return row.data[0].get('name', '')
+    except Exception as e:
+        print(f"Erro ao buscar banner diário ({daily_type}): {e}")
+    return ""
 
 def save_banner_url(banner_type: str, url: str) -> None:
     """Salva ou atualiza a URL de um banner no Supabase (tabela config)."""
@@ -3000,6 +3044,41 @@ def process_context_followup(remote_jid, push_name, text):
     state = ctx.get('state') or ctx.get('intent')
     data = ctx.get('data') or {}
 
+    if state == 'awaiting_promo_choice':
+        texto_norm = normalize_text(text)
+        # Interpreta a escolha do cliente entre encartes mensais ou diário
+        quer_mensal = any(p in texto_norm for p in ('1', 'mensal', 'mensais', 'mes', 'folheto mensal'))
+        quer_diario = any(p in texto_norm for p in ('2', 'diaria', 'diario', 'hoje', 'dia', 'folheto de hoje'))
+
+        if quer_mensal and not quer_diario:
+            urls_mensais = get_monthly_banner_urls()
+            clear_context(remote_jid)
+            if urls_mensais:
+                for url in urls_mensais:
+                    send_whatsapp_image(remote_jid, url)
+                return {"reply": None, "status": "monthly_banners_sent"}
+            else:
+                return {"reply": "Ainda não temos encartes mensais cadastrados. Em breve seu time atualiza!", "status": "no_monthly_banners"}
+
+        if quer_diario and not quer_mensal:
+            url_diario = get_daily_banner_for_today()
+            clear_context(remote_jid)
+            if url_diario:
+                send_whatsapp_image(remote_jid, url_diario)
+                return {"reply": None, "status": "daily_banner_sent"}
+            else:
+                return {"reply": "Não temos o folheto de hoje cadastrado ainda. Volte em breve!", "status": "no_daily_banner"}
+
+        # Resposta ambígua — repete a pergunta
+        return {
+            "reply": (
+                "Desculpe, não entendi bem. Responda:\n\n"
+                "1️⃣ *1* para os Encartes Mensais\n"
+                "2️⃣ *2* para o Folheto de Hoje"
+            ),
+            "status": "awaiting_promo_choice"
+        }
+
     if state == 'awaiting_competitor_product':
         if is_negative_reply(text):
             clear_context(remote_jid)
@@ -3610,9 +3689,9 @@ def get_banners_route():
 @login_required
 def upload_banner_route():
     """Recebe o upload de um banner, armazena no Supabase Storage e salva a URL."""
-    banner_type = request.form.get("type")  # "day" ou "week"
-    if banner_type not in ("day", "week"):
-        return jsonify({"error": "Tipo inválido. Use 'day' ou 'week'."}), 400
+    banner_type = request.form.get("type")
+    if banner_type not in ALL_BANNER_TYPES:
+        return jsonify({"error": f"Tipo inválido. Use um de: {', '.join(ALL_BANNER_TYPES)}"}), 400
 
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado."}), 400
@@ -3622,10 +3701,7 @@ def upload_banner_route():
         return jsonify({"error": "Arquivo inválido."}), 400
 
     # Nome fixo por tipo — upsert substitui o banner anterior automaticamente
-    config_type = BANNER_DAY_TYPE if banner_type == "day" else BANNER_WEEK_TYPE
-    storage_filename = f"banner_{banner_type}.jpg"
-
-    # Detecta o MIME type do arquivo enviado
+    storage_filename = f"{banner_type}.jpg"
     mimetype = file.mimetype or "image/jpeg"
 
     # Usa o cliente admin (service_role) para o upload — necessário para
@@ -3636,17 +3712,13 @@ def upload_banner_route():
 
     try:
         file_bytes = file.read()
-        # Faz o upload para o bucket "banners" no Supabase Storage
-        # upsert=True: se já existir um arquivo com esse nome, substitui
         sb_admin.storage.from_(BANNER_BUCKET).upload(
             path=storage_filename,
             file=file_bytes,
             file_options={"content-type": mimetype, "upsert": "true"}
         )
-        # Monta a URL pública do Supabase Storage
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/{BANNER_BUCKET}/{storage_filename}"
-        # Salva a URL no banco para o Pipico usar na hora de responder
-        save_banner_url(config_type, public_url)
+        save_banner_url(banner_type, public_url)
         print(f"🖼️ Banner '{banner_type}' enviado com sucesso: {public_url}")
         return jsonify({"status": "ok", "url": public_url})
     except Exception as e:
@@ -3659,11 +3731,10 @@ def delete_banner_route():
     """Remove um banner do Supabase Storage e apaga a URL do banco."""
     data = request.get_json(silent=True) or {}
     banner_type = data.get("type")
-    if banner_type not in ("day", "week"):
-        return jsonify({"error": "Tipo inválido. Use 'day' ou 'week'."}), 400
+    if banner_type not in ALL_BANNER_TYPES:
+        return jsonify({"error": f"Tipo inválido. Use um de: {', '.join(ALL_BANNER_TYPES)}"}), 400
 
-    config_type = BANNER_DAY_TYPE if banner_type == "day" else BANNER_WEEK_TYPE
-    storage_filename = f"banner_{banner_type}.jpg"
+    storage_filename = f"{banner_type}.jpg"
 
     sb_admin = get_supabase_admin()
     if sb_admin:
@@ -3673,7 +3744,7 @@ def delete_banner_route():
             # O arquivo pode não existir no storage — ignoramos e continuamos
             print(f"Aviso ao remover arquivo do storage: {e}")
 
-    delete_banner_url(config_type)
+    delete_banner_url(banner_type)
     return jsonify({"status": "deleted"})
 
 @app.route("/api/products")
@@ -4459,51 +4530,67 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "product_unavailable_scope"}), 200
 
-    elif intencao == 'promocoes':
-        # Verifica se há banner cadastrado — se sim, envia só a imagem
-        # Se não houver banner, cai no texto de promoções como antes
+    elif intencao == ‘promocoes’:
         banners = get_banner_urls()
-        sent_banner = False
-        if banners.get("day"):
-            send_whatsapp_image(remote_jid, banners["day"])
-            sent_banner = True
-        if banners.get("week"):
-            send_whatsapp_image(remote_jid, banners["week"])
-            sent_banner = True
-        if not sent_banner:
+        tem_mensais = any(banners.get(t) for t in MONTHLY_BANNER_TYPES)
+        tem_diarios = any(banners.get(t) for t in DAILY_BANNER_TYPES)
+
+        if not tem_mensais and not tem_diarios:
+            # Sem banners → responde com texto de promoções
             reply = generate_promocoes_response(text)
             send_whatsapp_message(remote_jid, reply)
+        elif tem_mensais and tem_diarios:
+            # Tem os dois tipos → pergunta ao cliente
+            pergunta = (
+                "Temos dois tipos de encartes disponíveis:\n\n"
+                "1️⃣ *Encartes Mensais* — nossos folhetos completos do mês\n"
+                "2️⃣ *Folheto de Hoje* — a oferta válida para hoje\n\n"
+                "Qual você prefere? Responda *1* para Mensais ou *2* para o de Hoje."
+            )
+            send_whatsapp_message(remote_jid, pergunta)
+            save_context(remote_jid, ‘awaiting_promo_choice’, {})
+        elif tem_mensais:
+            # Só mensais → envia todos direto
+            for url in get_monthly_banner_urls():
+                send_whatsapp_image(remote_jid, url)
+        else:
+            # Só diário → envia o do dia
+            url_diario = get_daily_banner_for_today()
+            if url_diario:
+                send_whatsapp_image(remote_jid, url_diario)
+            else:
+                send_whatsapp_message(remote_jid, "Não temos o folheto de hoje disponível ainda.")
         return jsonify({"status": "promotions_sent"}), 200
 
-    elif intencao == 'consulta_produto':
+    elif intencao == ‘consulta_produto’:
         produto_nome = extrair_produto_ia(text)
         if produto_nome:
             query = produto_nome
         else:
-            query = re.sub(r'^(quanto custa|qual o preço d[aoe]|preço d[aoe]|valor d[aoe]|tem |vocês tem|voces tem|vcs tem|quanto t[aá]\s+[aoe]|quanto [eé]\s+[aoe])\s*', '', text.lower()).strip().rstrip('?')
+            query = re.sub(r’^(quanto custa|qual o preço d[aoe]|preço d[aoe]|valor d[aoe]|tem |vocês tem|voces tem|vcs tem|quanto t[aá]\s+[aoe]|quanto [eé]\s+[aoe])\s*’, ‘’, text.lower()).strip().rstrip(‘?’)
         print(f"ðŸ›’ [PRODUCT] Searching for: {query}")
         results = buscar_produto_local(query)
         reply = generate_product_response(text, results)
         send_whatsapp_message(remote_jid, reply)
-        save_context(remote_jid, 'consulta_produto', {'produto': query})
+        save_context(remote_jid, ‘consulta_produto’, {‘produto’: query})
         return jsonify({"status": "product_query", "results": len(results)}), 200
 
-    elif intencao == 'pergunta_geral':
+    elif intencao == ‘pergunta_geral’:
         reply = generate_pergunta_geral_response(text)
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "general_question_answered"}), 200
 
-    elif intencao == 'lista_espera':
-        produto = re.sub(r'^(me avisa quando|avisa quando chegar|avisa quando tiver|quando chegar|quando vai ter|quando volta)\s*', '', text.lower()).strip()
+    elif intencao == ‘lista_espera’:
+        produto = re.sub(r’^(me avisa quando|avisa quando chegar|avisa quando tiver|quando chegar|quando vai ter|quando volta)\s*’, ‘’, text.lower()).strip()
         registrar_lista_espera(remote_jid, push_name, produto)
         reply = f"Anotado! Assim que {produto} voltar ao estoque, te aviso por aqui âœ…"
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "waitlist_registered", "product": produto}), 200
 
-    elif intencao == 'ofertas':
+    elif intencao == ‘ofertas’:
         reply = generate_ofertas_response()
         send_whatsapp_message(remote_jid, reply)
-        save_context(remote_jid, 'ofertas', {'ofertas': reply})
+        save_context(remote_jid, ‘ofertas’, {‘ofertas’: reply})
         return jsonify({"status": "offers_sent"}), 200
 
     elif intencao == 'lista_compras':
@@ -4801,16 +4888,30 @@ def webhook():
 
                 elif intencao == 'promocoes':
                     banners = get_banner_urls()
-                    sent_banner = False
-                    if banners.get("day"):
-                        send_whatsapp_image(remote_jid, banners["day"])
-                        sent_banner = True
-                    if banners.get("week"):
-                        send_whatsapp_image(remote_jid, banners["week"])
-                        sent_banner = True
-                    if not sent_banner:
+                    tem_mensais = any(banners.get(t) for t in MONTHLY_BANNER_TYPES)
+                    tem_diarios = any(banners.get(t) for t in DAILY_BANNER_TYPES)
+
+                    if not tem_mensais and not tem_diarios:
                         reply = generate_promocoes_response(text)
                         send_whatsapp_message(remote_jid, reply)
+                    elif tem_mensais and tem_diarios:
+                        pergunta = (
+                            "Temos dois tipos de encartes disponíveis:\n\n"
+                            "1️⃣ *Encartes Mensais* — nossos folhetos completos do mês\n"
+                            "2️⃣ *Folheto de Hoje* — a oferta válida para hoje\n\n"
+                            "Qual você prefere? Responda *1* para Mensais ou *2* para o de Hoje."
+                        )
+                        send_whatsapp_message(remote_jid, pergunta)
+                        save_context(remote_jid, 'awaiting_promo_choice', {})
+                    elif tem_mensais:
+                        for url in get_monthly_banner_urls():
+                            send_whatsapp_image(remote_jid, url)
+                    else:
+                        url_diario = get_daily_banner_for_today()
+                        if url_diario:
+                            send_whatsapp_image(remote_jid, url_diario)
+                        else:
+                            send_whatsapp_message(remote_jid, "Não temos o folheto de hoje disponível ainda.")
                     return jsonify({"status": "promotions_sent"}), 200
 
                 elif intencao == 'consulta_produto':
