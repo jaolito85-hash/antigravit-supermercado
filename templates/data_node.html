@@ -850,6 +850,128 @@
             margin-top: 2px;
         }
 
+        /* --- BANNER DE PROMOÇÃO --- */
+        .banner-section {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .banner-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .banner-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .banner-card-header i {
+            color: #34d399;
+        }
+
+        .banner-card-caption {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-top: -8px;
+        }
+
+        .banner-preview-box {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1.5px dashed rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .banner-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .banner-empty-label {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .banner-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .banner-upload-label {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #059669, #16a34a);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.87rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .banner-upload-label:hover {
+            opacity: 0.88;
+        }
+
+        .banner-delete-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 0.87rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .banner-delete-btn:hover {
+            background: rgba(239, 68, 68, 0.18);
+        }
+
+        .banner-status {
+            font-size: 0.8rem;
+            min-height: 18px;
+            color: #86efac;
+        }
+
+        @media (max-width: 768px) {
+            .banner-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1731,6 +1853,66 @@
                         </div>
                     </div>
                 </div>
+                <!-- BANNERS DE PROMOÇÃO -->
+                <div class="banner-section">
+
+                    <!-- BANNER DO DIA -->
+                    <div class="banner-card">
+                        <div class="banner-card-header">
+                            <i class="ri-sun-line"></i> Banner do dia
+                        </div>
+                        <p class="banner-card-caption">
+                            Quando ativo, o Seu Pipico envia essa imagem no lugar do texto ao receber qualquer pergunta sobre promoções de hoje.
+                        </p>
+                        <div class="banner-preview-box" id="banner-day-box">
+                            <img id="banner-day-img" src="" alt="Banner do dia" />
+                            <div class="banner-empty-label" id="banner-day-empty">
+                                <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                Nenhum banner ativo
+                            </div>
+                        </div>
+                        <div class="banner-actions">
+                            <label class="banner-upload-label" for="banner-day-input">
+                                <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                <input type="file" id="banner-day-input" accept="image/*" hidden
+                                    onchange="uploadBanner('day', this)">
+                            </label>
+                            <button class="banner-delete-btn" onclick="deleteBanner('day')">
+                                <i class="ri-delete-bin-line"></i> Remover
+                            </button>
+                        </div>
+                        <div class="banner-status" id="banner-day-status"></div>
+                    </div>
+
+                    <!-- BANNER DA SEMANA -->
+                    <div class="banner-card">
+                        <div class="banner-card-header">
+                            <i class="ri-calendar-event-line"></i> Banner da semana
+                        </div>
+                        <p class="banner-card-caption">
+                            Use para encarte ou campanha semanal. Quando ativo, o Seu Pipico envia essa imagem ao receber qualquer pergunta sobre promoções.
+                        </p>
+                        <div class="banner-preview-box" id="banner-week-box">
+                            <img id="banner-week-img" src="" alt="Banner da semana" />
+                            <div class="banner-empty-label" id="banner-week-empty">
+                                <i class="ri-image-add-line" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:.4"></i>
+                                Nenhum banner ativo
+                            </div>
+                        </div>
+                        <div class="banner-actions">
+                            <label class="banner-upload-label" for="banner-week-input">
+                                <i class="ri-upload-cloud-2-line"></i> Enviar imagem
+                                <input type="file" id="banner-week-input" accept="image/*" hidden
+                                    onchange="uploadBanner('week', this)">
+                            </label>
+                            <button class="banner-delete-btn" onclick="deleteBanner('week')">
+                                <i class="ri-delete-bin-line"></i> Remover
+                            </button>
+                        </div>
+                        <div class="banner-status" id="banner-week-status"></div>
+                    </div>
+
+                </div>
             </section>
 
             <aside class="promo-side">
@@ -2356,6 +2538,8 @@
             } catch (error) {
                 document.getElementById('promo-save-status').innerText = 'Erro ao carregar promoções.';
             }
+            // Carrega banners junto com as promoções de texto
+            await loadBanners();
         }
 
         async function savePromotions() {
@@ -2389,6 +2573,91 @@
                 status.innerText = 'Não consegui salvar agora. Tente novamente.';
             } finally {
                 button.disabled = false;
+            }
+        }
+
+        // --- BANNERS DE PROMOÇÃO ---
+
+        function setBannerPreview(type, url) {
+            // Exibe ou esconde a imagem do banner no card do dashboard
+            const img = document.getElementById(`banner-${type}-img`);
+            const empty = document.getElementById(`banner-${type}-empty`);
+            if (url) {
+                img.src = url + '?t=' + Date.now(); // cache-bust para forçar reload
+                img.style.display = 'block';
+                empty.style.display = 'none';
+            } else {
+                img.src = '';
+                img.style.display = 'none';
+                empty.style.display = 'flex';
+            }
+        }
+
+        async function loadBanners() {
+            // Carrega os banners ativos ao abrir a aba de Promoções
+            try {
+                const res = await fetch('/api/banners');
+                const data = await res.json();
+                setBannerPreview('day', data.day || '');
+                setBannerPreview('week', data.week || '');
+            } catch (e) {
+                console.warn('Erro ao carregar banners:', e);
+            }
+        }
+
+        async function uploadBanner(type, input) {
+            // Faz upload do arquivo selecionado para o Supabase Storage
+            const status = document.getElementById(`banner-${type}-status`);
+            const file = input.files[0];
+            if (!file) return;
+
+            status.style.color = '#9ca3af';
+            status.innerText = 'Enviando banner...';
+
+            const formData = new FormData();
+            formData.append('type', type);
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/banners/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro no upload');
+
+                setBannerPreview(type, data.url);
+                status.style.color = '#86efac';
+                status.innerText = 'Banner ativo! O Seu Pipico já vai enviar essa imagem.';
+            } catch (e) {
+                status.style.color = '#fca5a5';
+                status.innerText = 'Erro ao enviar. Tente novamente.';
+                console.error('Upload erro:', e);
+            } finally {
+                input.value = ''; // limpa o input para permitir novo upload do mesmo arquivo
+            }
+        }
+
+        async function deleteBanner(type) {
+            // Remove o banner ativo (storage + banco)
+            const status = document.getElementById(`banner-${type}-status`);
+            status.style.color = '#9ca3af';
+            status.innerText = 'Removendo banner...';
+
+            try {
+                const res = await fetch('/api/banners/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type })
+                });
+                if (!res.ok) throw new Error('delete_failed');
+
+                setBannerPreview(type, '');
+                status.style.color = '#fca5a5';
+                status.innerText = 'Banner removido. O Seu Pipico voltará a usar o texto.';
+            } catch (e) {
+                status.style.color = '#fca5a5';
+                status.innerText = 'Erro ao remover. Tente novamente.';
             }
         }
 

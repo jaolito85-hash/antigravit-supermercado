@@ -75,6 +75,9 @@ AGENT_NAME = os.getenv("AGENT_NAME", "Seu Pipico")
 DEFAULT_PROMOTIONS_EMPTY_TEXT = "No momento eu ainda não recebi as promoções atualizadas."
 PROMOTION_DAY_TYPE = "promotion_day"
 PROMOTION_WEEK_TYPE = "promotion_week"
+BANNER_DAY_TYPE = "banner_day"
+BANNER_WEEK_TYPE = "banner_week"
+BANNER_BUCKET = "banners"
 
 PROMO_KEYWORDS = (
     'oferta', 'ofertas', 'promocao', 'promocao da semana', 'promocao da semana',
@@ -584,6 +587,52 @@ def save_promotions_config(day_text, week_text):
     local_config["promotions"] = {"day": day_text, "week": week_text}
     save_json(CONFIG_FILE, local_config)
     return local_config["promotions"]
+
+def get_banner_urls() -> dict:
+    """Retorna as URLs dos banners de promoção do dia e da semana armazenados no Supabase."""
+    sb = get_supabase()
+    result = {"day": "", "week": ""}
+    if not sb:
+        return result
+    try:
+        rows = sb.table('config').select('type,name').in_(
+            'type', [BANNER_DAY_TYPE, BANNER_WEEK_TYPE]
+        ).execute()
+        for row in (rows.data or []):
+            if row['type'] == BANNER_DAY_TYPE:
+                result["day"] = row.get('name', '')
+            elif row['type'] == BANNER_WEEK_TYPE:
+                result["week"] = row.get('name', '')
+    except Exception as e:
+        print(f"Erro ao buscar URLs de banner: {e}")
+    return result
+
+def save_banner_url(banner_type: str, url: str) -> None:
+    """Salva ou atualiza a URL de um banner no Supabase (tabela config)."""
+    sb = get_supabase()
+    if not sb:
+        return
+    try:
+        existing = sb.table('config').select('id').eq('type', banner_type).limit(1).execute()
+        payload = {"type": banner_type, "name": url}
+        if existing.data:
+            sb.table('config').update(payload).eq('id', existing.data[0]['id']).execute()
+        else:
+            sb.table('config').insert(payload).execute()
+        print(f"🖼️ URL do banner '{banner_type}' salva no Supabase.")
+    except Exception as e:
+        print(f"Erro ao salvar URL do banner ({banner_type}): {e}")
+
+def delete_banner_url(banner_type: str) -> None:
+    """Remove a URL de um banner do Supabase."""
+    sb = get_supabase()
+    if not sb:
+        return
+    try:
+        sb.table('config').delete().eq('type', banner_type).execute()
+        print(f"🗑️ Banner '{banner_type}' removido do Supabase.")
+    except Exception as e:
+        print(f"Erro ao deletar banner ({banner_type}): {e}")
 
 def get_weekly_promotions():
     promo_text = get_promotions_from_config().get("week", "")
@@ -3330,6 +3379,27 @@ def send_whatsapp_message(remote_jid, message):
     except Exception as e:
         print(f"❌ Error sending message: {e}")
 
+def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
+    """Envia uma imagem (banner de promoção) pelo WhatsApp via Evolution API."""
+    if not EVOLUTION_API_URL or not EVOLUTION_API_KEY or not EVOLUTION_INSTANCE_NAME:
+        print("❌ Evolution API não configurada para envio de imagem.")
+        return
+    url = f"{EVOLUTION_API_URL}/message/sendMedia/{EVOLUTION_INSTANCE_NAME}"
+    headers = {"apikey": EVOLUTION_API_KEY, "Content-Type": "application/json"}
+    payload = {
+        "number": remote_jid,
+        "mediatype": "image",
+        "mimetype": "image/jpeg",
+        "media": image_url,
+        "fileName": "banner.jpg",
+        "caption": caption
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        print(f"🖼️ Banner enviado para {remote_jid}: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Erro ao enviar imagem para {remote_jid}: {e}")
+
 # --- SPAM PROTECTION ---
 
 rate_limit_store = defaultdict(list)
@@ -3511,6 +3581,80 @@ def promotions_route():
         "status": "saved",
         "promotions": promotions
     })
+
+@app.route("/api/banners", methods=["GET"])
+@login_required
+def get_banners_route():
+    """Retorna as URLs dos banners de promoção ativos."""
+    return jsonify(get_banner_urls())
+
+@app.route("/api/banners/upload", methods=["POST"])
+@login_required
+def upload_banner_route():
+    """Recebe o upload de um banner, armazena no Supabase Storage e salva a URL."""
+    banner_type = request.form.get("type")  # "day" ou "week"
+    if banner_type not in ("day", "week"):
+        return jsonify({"error": "Tipo inválido. Use 'day' ou 'week'."}), 400
+
+    if "file" not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado."}), 400
+
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"error": "Arquivo inválido."}), 400
+
+    # Nome fixo por tipo — upsert substitui o banner anterior automaticamente
+    config_type = BANNER_DAY_TYPE if banner_type == "day" else BANNER_WEEK_TYPE
+    storage_filename = f"banner_{banner_type}.jpg"
+
+    # Detecta o MIME type do arquivo enviado
+    mimetype = file.mimetype or "image/jpeg"
+
+    sb = get_supabase()
+    if not sb:
+        return jsonify({"error": "Supabase indisponível."}), 500
+
+    try:
+        file_bytes = file.read()
+        # Faz o upload para o bucket "banners" no Supabase Storage
+        # upsert=True: se já existir um arquivo com esse nome, substitui
+        sb.storage.from_(BANNER_BUCKET).upload(
+            path=storage_filename,
+            file=file_bytes,
+            file_options={"content-type": mimetype, "upsert": "true"}
+        )
+        # Monta a URL pública do Supabase Storage
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{BANNER_BUCKET}/{storage_filename}"
+        # Salva a URL no banco para o Pipico usar na hora de responder
+        save_banner_url(config_type, public_url)
+        print(f"🖼️ Banner '{banner_type}' enviado com sucesso: {public_url}")
+        return jsonify({"status": "ok", "url": public_url})
+    except Exception as e:
+        print(f"❌ Erro no upload do banner: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/banners/delete", methods=["POST"])
+@login_required
+def delete_banner_route():
+    """Remove um banner do Supabase Storage e apaga a URL do banco."""
+    data = request.get_json(silent=True) or {}
+    banner_type = data.get("type")
+    if banner_type not in ("day", "week"):
+        return jsonify({"error": "Tipo inválido. Use 'day' ou 'week'."}), 400
+
+    config_type = BANNER_DAY_TYPE if banner_type == "day" else BANNER_WEEK_TYPE
+    storage_filename = f"banner_{banner_type}.jpg"
+
+    sb = get_supabase()
+    if sb:
+        try:
+            sb.storage.from_(BANNER_BUCKET).remove([storage_filename])
+        except Exception as e:
+            # O arquivo pode não existir no storage — ignoramos e continuamos
+            print(f"Aviso ao remover arquivo do storage: {e}")
+
+    delete_banner_url(config_type)
+    return jsonify({"status": "deleted"})
 
 @app.route("/api/products")
 @login_required
@@ -4296,8 +4440,19 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         return jsonify({"status": "product_unavailable_scope"}), 200
 
     elif intencao == 'promocoes':
-        reply = generate_promocoes_response(text)
-        send_whatsapp_message(remote_jid, reply)
+        # Verifica se há banner cadastrado — se sim, envia só a imagem
+        # Se não houver banner, cai no texto de promoções como antes
+        banners = get_banner_urls()
+        sent_banner = False
+        if banners.get("day"):
+            send_whatsapp_image(remote_jid, banners["day"])
+            sent_banner = True
+        if banners.get("week"):
+            send_whatsapp_image(remote_jid, banners["week"])
+            sent_banner = True
+        if not sent_banner:
+            reply = generate_promocoes_response(text)
+            send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "promotions_sent"}), 200
 
     elif intencao == 'consulta_produto':
@@ -4625,8 +4780,17 @@ def webhook():
                     return jsonify({"status": "product_unavailable_scope"}), 200
 
                 elif intencao == 'promocoes':
-                    reply = generate_promocoes_response(text)
-                    send_whatsapp_message(remote_jid, reply)
+                    banners = get_banner_urls()
+                    sent_banner = False
+                    if banners.get("day"):
+                        send_whatsapp_image(remote_jid, banners["day"])
+                        sent_banner = True
+                    if banners.get("week"):
+                        send_whatsapp_image(remote_jid, banners["week"])
+                        sent_banner = True
+                    if not sent_banner:
+                        reply = generate_promocoes_response(text)
+                        send_whatsapp_message(remote_jid, reply)
                     return jsonify({"status": "promotions_sent"}), 200
 
                 elif intencao == 'consulta_produto':
