@@ -4530,7 +4530,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "product_unavailable_scope"}), 200
 
-    elif intencao == ‘promocoes’:
+    elif intencao == 'promocoes':
         banners = get_banner_urls()
         tem_mensais = any(banners.get(t) for t in MONTHLY_BANNER_TYPES)
         tem_diarios = any(banners.get(t) for t in DAILY_BANNER_TYPES)
@@ -4548,7 +4548,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 "Qual você prefere? Responda *1* para Mensais ou *2* para o de Hoje."
             )
             send_whatsapp_message(remote_jid, pergunta)
-            save_context(remote_jid, ‘awaiting_promo_choice’, {})
+            save_context(remote_jid, 'awaiting_promo_choice', {})
         elif tem_mensais:
             # Só mensais → envia todos direto
             for url in get_monthly_banner_urls():
@@ -4562,35 +4562,35 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 send_whatsapp_message(remote_jid, "Não temos o folheto de hoje disponível ainda.")
         return jsonify({"status": "promotions_sent"}), 200
 
-    elif intencao == ‘consulta_produto’:
+    elif intencao == 'consulta_produto':
         produto_nome = extrair_produto_ia(text)
         if produto_nome:
             query = produto_nome
         else:
-            query = re.sub(r’^(quanto custa|qual o preço d[aoe]|preço d[aoe]|valor d[aoe]|tem |vocês tem|voces tem|vcs tem|quanto t[aá]\s+[aoe]|quanto [eé]\s+[aoe])\s*’, ‘’, text.lower()).strip().rstrip(‘?’)
-        print(f"ðŸ›’ [PRODUCT] Searching for: {query}")
+            query = re.sub(r'^(quanto custa|qual o preço d[aoe]|preço d[aoe]|valor d[aoe]|tem |vocês tem|voces tem|vcs tem|quanto t[aá]\s+[aoe]|quanto [eé]\s+[aoe])\s*', '', text.lower()).strip().rstrip('?')
+        print(f"ðŸ›' [PRODUCT] Searching for: {query}")
         results = buscar_produto_local(query)
         reply = generate_product_response(text, results)
         send_whatsapp_message(remote_jid, reply)
-        save_context(remote_jid, ‘consulta_produto’, {‘produto’: query})
+        save_context(remote_jid, 'consulta_produto', {'produto': query})
         return jsonify({"status": "product_query", "results": len(results)}), 200
 
-    elif intencao == ‘pergunta_geral’:
+    elif intencao == 'pergunta_geral':
         reply = generate_pergunta_geral_response(text)
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "general_question_answered"}), 200
 
-    elif intencao == ‘lista_espera’:
-        produto = re.sub(r’^(me avisa quando|avisa quando chegar|avisa quando tiver|quando chegar|quando vai ter|quando volta)\s*’, ‘’, text.lower()).strip()
+    elif intencao == 'lista_espera':
+        produto = re.sub(r'^(me avisa quando|avisa quando chegar|avisa quando tiver|quando chegar|quando vai ter|quando volta)\s*', '', text.lower()).strip()
         registrar_lista_espera(remote_jid, push_name, produto)
         reply = f"Anotado! Assim que {produto} voltar ao estoque, te aviso por aqui âœ…"
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "waitlist_registered", "product": produto}), 200
 
-    elif intencao == ‘ofertas’:
+    elif intencao == 'ofertas':
         reply = generate_ofertas_response()
         send_whatsapp_message(remote_jid, reply)
-        save_context(remote_jid, ‘ofertas’, {‘ofertas’: reply})
+        save_context(remote_jid, 'ofertas', {'ofertas': reply})
         return jsonify({"status": "offers_sent"}), 200
 
     elif intencao == 'lista_compras':
