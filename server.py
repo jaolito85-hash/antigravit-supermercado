@@ -28,6 +28,9 @@ EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY")
 EVOLUTION_INSTANCE_NAME = os.getenv("EVOLUTION_INSTANCE_NAME")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+# Chave service_role — bypassa RLS para operações de servidor (upload de arquivos, etc.)
+# Nunca expor essa chave no frontend. Apenas no .env do servidor.
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 # Initialize Supabase
 supabase = None
@@ -59,6 +62,21 @@ def _reconnect_supabase():
     """Force reconnect Supabase client."""
     global supabase
     supabase = None
+    return get_supabase()
+
+def get_supabase_admin():
+    """Retorna um cliente Supabase com a service_role key.
+    Essa chave bypassa RLS — usar apenas em operações de servidor
+    como upload de arquivos no Storage. Nunca expor no frontend.
+    Cai de volta para o cliente anon se a service key não estiver configurada.
+    """
+    if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+        try:
+            from supabase import create_client, Client
+            return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        except Exception as e:
+            print(f"⚠️ Supabase admin client failed: {e}")
+    # fallback para o cliente normal se service key não estiver no .env
     return get_supabase()
 
 EVENTS_FILE = 'execution/events.json'
@@ -3610,15 +3628,17 @@ def upload_banner_route():
     # Detecta o MIME type do arquivo enviado
     mimetype = file.mimetype or "image/jpeg"
 
-    sb = get_supabase()
-    if not sb:
+    # Usa o cliente admin (service_role) para o upload — necessário para
+    # contornar as políticas de RLS do Supabase Storage
+    sb_admin = get_supabase_admin()
+    if not sb_admin:
         return jsonify({"error": "Supabase indisponível."}), 500
 
     try:
         file_bytes = file.read()
         # Faz o upload para o bucket "banners" no Supabase Storage
         # upsert=True: se já existir um arquivo com esse nome, substitui
-        sb.storage.from_(BANNER_BUCKET).upload(
+        sb_admin.storage.from_(BANNER_BUCKET).upload(
             path=storage_filename,
             file=file_bytes,
             file_options={"content-type": mimetype, "upsert": "true"}
@@ -3645,10 +3665,10 @@ def delete_banner_route():
     config_type = BANNER_DAY_TYPE if banner_type == "day" else BANNER_WEEK_TYPE
     storage_filename = f"banner_{banner_type}.jpg"
 
-    sb = get_supabase()
-    if sb:
+    sb_admin = get_supabase_admin()
+    if sb_admin:
         try:
-            sb.storage.from_(BANNER_BUCKET).remove([storage_filename])
+            sb_admin.storage.from_(BANNER_BUCKET).remove([storage_filename])
         except Exception as e:
             # O arquivo pode não existir no storage — ignoramos e continuamos
             print(f"Aviso ao remover arquivo do storage: {e}")
