@@ -84,6 +84,7 @@ CONFIG_FILE = 'execution/config.json'
 PRODUCTS_FILE = 'execution/produtos_mock.json'
 MODERATION_FILE = 'execution/moderation_state.json'
 HANDOFF_FILE = 'execution/handoff_state.json'
+CONTEXT_STATE_DIR = 'execution/conversation_context'
 SENDER_LOCKS_DIR = 'execution/sender_locks'
 SENDER_LOCK_TIMEOUT_SECONDS = 45
 SENDER_LOCK_STALE_SECONDS = 120
@@ -986,6 +987,10 @@ def update_context_message(remote_jid, role, text):
     ctx['data'] = data
     ctx['timestamp'] = time_now()
     conversation_context[remote_jid] = ctx
+    try:
+        save_json(get_context_path(remote_jid), ctx)
+    except Exception as e:
+        print(f"[CONTEXT] update failed for {remote_jid}: {e}")
 
 def record_agent_reply(feedback_id, current_message, reply):
     if not feedback_id or not reply:
@@ -3508,22 +3513,46 @@ RATE_LIMIT_WINDOW = 600
 conversation_context = {}
 CONTEXT_TTL = 300  # 5 minutes
 
+def get_context_path(remote_jid):
+    os.makedirs(CONTEXT_STATE_DIR, exist_ok=True)
+    sender_hash = hashlib.sha1((remote_jid or "").encode("utf-8")).hexdigest()
+    return os.path.join(CONTEXT_STATE_DIR, f"{sender_hash}.json")
+
 def save_context(remote_jid, intent, data=None):
     """Salva contexto da última interação para continuidade"""
-    conversation_context[remote_jid] = {
+    ctx = {
         'state': intent,
         'intent': intent,
         'data': data or {},
         'timestamp': time_now()
     }
+    conversation_context[remote_jid] = ctx
+    try:
+        save_json(get_context_path(remote_jid), ctx)
+    except Exception as e:
+        print(f"[CONTEXT] save failed for {remote_jid}: {e}")
 
 def get_context(remote_jid):
     """Retorna contexto ativo se existir e não estiver expirado"""
     ctx = conversation_context.get(remote_jid)
+    if not ctx:
+        persisted = load_json(get_context_path(remote_jid), None)
+        if isinstance(persisted, dict):
+            ctx = persisted
+            conversation_context[remote_jid] = ctx
     if ctx and (time_now() - ctx['timestamp']) < CONTEXT_TTL:
         return ctx
-    conversation_context.pop(remote_jid, None)
+    clear_context(remote_jid)
     return None
+
+def clear_context(remote_jid):
+    conversation_context.pop(remote_jid, None)
+    try:
+        path = get_context_path(remote_jid)
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception as e:
+        print(f"[CONTEXT] clear failed for {remote_jid}: {e}")
 
 def is_affirmative(text):
     """Verifica se a mensagem é uma resposta afirmativa curta"""
@@ -4439,7 +4468,12 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         for fb in feedbacks
         for msg in (get_feedback_customer_messages(fb.get('message', '')) or [''])
     }
-    if msg_hash in existing:
+    promo_choice_context = bool(
+        ctx
+        and (ctx.get('state') or ctx.get('intent')) == 'awaiting_promo_choice'
+        and normalize_text(text or "") in {'1', '2'}
+    )
+    if msg_hash in existing and not promo_choice_context:
         return jsonify({"status": "ignored_duplicate"}), 200
 
     handoff_entry = get_handoff_entry(remote_jid)
