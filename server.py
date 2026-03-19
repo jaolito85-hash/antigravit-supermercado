@@ -4401,9 +4401,12 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         print(f"[QR-WELCOME] Boas-vindas enviadas para {remote_jid}")
         return jsonify({"status": "qr_welcome_sent"}), 200
 
-    if len(text.strip()) < MIN_MESSAGE_LENGTH:
+    ctx = get_context(remote_jid)
+
+    # Permite respostas curtas (ex.: "1"/"2") quando hÃ¡ contexto pendente.
+    if len(text.strip()) < MIN_MESSAGE_LENGTH and not ctx:
         return jsonify({"status": "ignored_too_short"}), 200
-    if is_emoji_only(text):
+    if is_emoji_only(text) and not ctx:
         return jsonify({"status": "ignored_emoji_only"}), 200
 
     abuse = analyze_abuse_message(text)
@@ -4452,18 +4455,19 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 )
         return jsonify({"status": "human_takeover_active"}), 200
 
-    ctx = get_context(remote_jid)
     handled_context = process_context_followup(remote_jid, push_name, text)
     if handled_context:
-        send_whatsapp_message(remote_jid, handled_context["reply"])
-        if handled_context.get("result"):
+        handled_reply = handled_context.get("reply")
+        if handled_reply:
+            send_whatsapp_message(remote_jid, handled_reply)
+        if handled_context.get("result") and handled_reply:
             record_agent_reply(
                 handled_context["result"].get("id"),
                 handled_context["result"].get("message"),
-                handled_context["reply"]
+                handled_reply
             )
-        else:
-            update_context_message(remote_jid, 'agent', handled_context["reply"])
+        elif handled_reply:
+            update_context_message(remote_jid, 'agent', handled_reply)
         return jsonify({"status": handled_context["status"]}), 200
 
     if ctx and is_affirmative(text):
