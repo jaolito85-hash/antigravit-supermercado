@@ -766,25 +766,17 @@ def _get_all_daily_banner_urls() -> list:
     return [(label, banners[t]) for t, label in daily_map if banners.get(t)]
 
 def _enviar_promo_semana(remote_jid):
-    """Envia promoções da semana: banners diários (seg-ter, qua-qui, sex-sab) + encartes mensais."""
+    """Envia promoções da semana: os 3 banners diários (seg-ter, qua-qui, sex-sab)."""
     daily_banners = _get_all_daily_banner_urls()
-    urls_mensais = get_monthly_banner_urls()
 
-    if not daily_banners and not urls_mensais:
+    if not daily_banners:
         send_whatsapp_message(remote_jid, "Não temos promoções da semana disponíveis no momento. Fique de olho que logo atualizamos! 👀")
         return
 
     send_whatsapp_message(remote_jid, f"🛒 *Promoções da semana no {MARKET_NAME}:*")
 
-    # Envia os 3 banners diários com legenda dos dias
     for label, url in daily_banners:
         send_whatsapp_image(remote_jid, url, caption=label)
-
-    # Envia os encartes mensais em seguida
-    if urls_mensais:
-        send_whatsapp_message(remote_jid, "📋 *Encartes do mês:*")
-        for url in urls_mensais:
-            send_whatsapp_image(remote_jid, url)
 
 def _enviar_promo_mes(remote_jid):
     """Envia promoções do mês (encartes mensais) para o cliente."""
