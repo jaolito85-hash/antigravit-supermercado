@@ -2206,6 +2206,15 @@ def detectar_intencao(texto):
     if any(p in texto_norm for p in PROMO_KEYWORDS_NORMALIZED):
         return 'promocoes'
 
+    ESTRUTURA_KEYWORDS = (
+        'estacionamento', 'vaga', 'estacionar', 'banheiro', 'elevador',
+        'escada', 'rampa', 'acessibilidade', 'cadeirante', 'estrutura',
+        'carrinho', 'cesta', 'sacola', 'entrada', 'saida', 'portaria',
+        'ar condicionado', 'bebedouro', 'wifi', 'wi-fi',
+    )
+    if any(p in texto_norm for p in ESTRUTURA_KEYWORDS):
+        return 'estrutura_local'
+
     if classificar_sentimento(texto) in ['Urgente', 'Critico']:
         return 'feedback'
 
@@ -4608,6 +4617,11 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, reply)
         return jsonify({'status': 'horario_sent'}), 200
 
+    elif intencao == 'estrutura_local':
+        reply = "Sinto muito por isso! Para informações sobre acesso e estrutura do local, o ideal é falar com nossa equipe no estabelecimento, será um prazer te ajudar e obrigado pelo contato!"
+        send_whatsapp_message(remote_jid, reply)
+        return jsonify({"status": "estrutura_local_sent"}), 200
+
     elif intencao == 'consulta_indisponivel':
         reply = generate_unavailable_product_response()
         send_whatsapp_message(remote_jid, reply)
@@ -4945,7 +4959,12 @@ def webhook():
                 intencao = detectar_intencao(text)
                 print(f"🔍 [INTENT] {intencao}: {text[:50]}")
 
-                if intencao == 'consulta_indisponivel':
+                if intencao == 'estrutura_local':
+                    reply = "Sinto muito por isso! Para informações sobre acesso e estrutura do local, o ideal é falar com nossa equipe no estabelecimento, será um prazer te ajudar e obrigado pelo contato!"
+                    send_whatsapp_message(remote_jid, reply)
+                    return jsonify({"status": "estrutura_local_sent"}), 200
+
+                elif intencao == 'consulta_indisponivel':
                     reply = generate_unavailable_product_response()
                     send_whatsapp_message(remote_jid, reply)
                     return jsonify({"status": "product_unavailable_scope"}), 200
