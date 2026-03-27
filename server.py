@@ -732,6 +732,60 @@ def format_promotions_text(raw_text):
         lines.append(f"• {line}")
     return "\n".join(lines)
 
+def _detectar_periodo_promo(texto_norm):
+    """Detecta se o cliente especificou um período de promoção no texto normalizado."""
+    if any(p in texto_norm for p in ('do dia', 'de hoje', 'diaria', 'diario')):
+        return 'dia'
+    if any(p in texto_norm for p in ('da semana', 'semanal', 'semanais')):
+        return 'semana'
+    if any(p in texto_norm for p in ('do mes', 'mensal', 'mensais', 'encarte')):
+        return 'mes'
+    return None
+
+def _enviar_promo_dia(remote_jid):
+    """Envia promoções do dia (banner diário ou texto) para o cliente."""
+    url_diario = get_daily_banner_for_today()
+    if url_diario:
+        send_whatsapp_image(remote_jid, url_diario)
+        return
+    day_text = get_daily_promotions()
+    if day_text:
+        formatted = format_promotions_text(day_text)
+        send_whatsapp_message(remote_jid, f"🛒 *Promoções de hoje no {MARKET_NAME}:*\n\n{formatted}")
+    else:
+        send_whatsapp_message(remote_jid, "Não temos promoções do dia disponíveis no momento. Fique de olho que logo atualizamos! 👀")
+
+def _enviar_promo_semana(remote_jid):
+    """Envia promoções da semana (texto) para o cliente."""
+    week_text = get_weekly_promotions()
+    if week_text and week_text != DEFAULT_PROMOTIONS_EMPTY_TEXT:
+        formatted = format_promotions_text(week_text)
+        send_whatsapp_message(remote_jid, f"🛒 *Promoções da semana no {MARKET_NAME}:*\n\n{formatted}")
+    else:
+        send_whatsapp_message(remote_jid, "Não temos promoções da semana disponíveis no momento. Fique de olho que logo atualizamos! 👀")
+
+def _enviar_promo_mes(remote_jid):
+    """Envia promoções do mês (encartes mensais) para o cliente."""
+    urls_mensais = get_monthly_banner_urls()
+    if urls_mensais:
+        for url in urls_mensais:
+            send_whatsapp_image(remote_jid, url)
+    else:
+        send_whatsapp_message(remote_jid, "Não temos encartes do mês disponíveis no momento. Fique de olho que logo atualizamos! 👀")
+
+def _enviar_menu_promocoes(remote_jid):
+    """Envia menu fixo de promoções para o cliente escolher o período."""
+    menu = (
+        "🛒 *Temos promoções pra você!*\n\n"
+        "Qual tipo de promoção quer ver?\n\n"
+        "1️⃣ *Promoções do Dia*\n"
+        "2️⃣ *Promoções da Semana*\n"
+        "3️⃣ *Promoções do Mês*\n\n"
+        "Responda *1*, *2* ou *3*"
+    )
+    send_whatsapp_message(remote_jid, menu)
+    save_context(remote_jid, 'awaiting_promo_choice', {})
+
 def build_promotions_prompt_block():
     promotions = get_promotions_from_config()
     day_text = promotions.get("day") or ""
@@ -3051,35 +3105,31 @@ def process_context_followup(remote_jid, push_name, text):
 
     if state == 'awaiting_promo_choice':
         texto_norm = normalize_text(text)
-        # Interpreta a escolha do cliente entre encartes mensais ou diário
-        quer_mensal = any(p in texto_norm for p in ('1', 'mensal', 'mensais', 'mes', 'folheto mensal'))
-        quer_diario = any(p in texto_norm for p in ('2', 'diaria', 'diario', 'hoje', 'dia', 'folheto de hoje'))
+        quer_dia = any(p in texto_norm for p in ('1', 'dia', 'hoje', 'diaria', 'diario'))
+        quer_semana = any(p in texto_norm for p in ('2', 'semana', 'semanal', 'semanais'))
+        quer_mes = any(p in texto_norm for p in ('3', 'mes', 'mensal', 'mensais', 'encarte'))
 
-        if quer_mensal and not quer_diario:
-            urls_mensais = get_monthly_banner_urls()
-            clear_context(remote_jid)
-            if urls_mensais:
-                for url in urls_mensais:
-                    send_whatsapp_image(remote_jid, url)
-                return {"reply": None, "status": "monthly_banners_sent"}
-            else:
-                return {"reply": "Ainda não temos encartes mensais cadastrados. Em breve seu time atualiza!", "status": "no_monthly_banners"}
+        escolhas = sum([quer_dia, quer_semana, quer_mes])
 
-        if quer_diario and not quer_mensal:
-            url_diario = get_daily_banner_for_today()
+        if escolhas == 1:
             clear_context(remote_jid)
-            if url_diario:
-                send_whatsapp_image(remote_jid, url_diario)
-                return {"reply": None, "status": "daily_banner_sent"}
-            else:
-                return {"reply": "Não temos o folheto de hoje cadastrado ainda. Volte em breve!", "status": "no_daily_banner"}
+            if quer_dia:
+                _enviar_promo_dia(remote_jid)
+                return {"reply": None, "status": "daily_promo_sent"}
+            elif quer_semana:
+                _enviar_promo_semana(remote_jid)
+                return {"reply": None, "status": "weekly_promo_sent"}
+            elif quer_mes:
+                _enviar_promo_mes(remote_jid)
+                return {"reply": None, "status": "monthly_promo_sent"}
 
         # Resposta ambígua — repete a pergunta
         return {
             "reply": (
                 "Desculpe, não entendi bem. Responda:\n\n"
-                "1️⃣ *1* para os Encartes Mensais\n"
-                "2️⃣ *2* para o Folheto de Hoje"
+                "1️⃣ *1* para Promoções do Dia\n"
+                "2️⃣ *2* para Promoções da Semana\n"
+                "3️⃣ *3* para Promoções do Mês"
             ),
             "status": "awaiting_promo_choice"
         }
@@ -4471,7 +4521,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     promo_choice_context = bool(
         ctx
         and (ctx.get('state') or ctx.get('intent')) == 'awaiting_promo_choice'
-        and normalize_text(text or "") in {'1', '2'}
+        and normalize_text(text or "") in {'1', '2', '3'}
     )
     if msg_hash in existing and not promo_choice_context:
         return jsonify({"status": "ignored_duplicate"}), 200
@@ -4569,35 +4619,16 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         return jsonify({"status": "product_unavailable_scope"}), 200
 
     elif intencao == 'promocoes':
-        banners = get_banner_urls()
-        tem_mensais = any(banners.get(t) for t in MONTHLY_BANNER_TYPES)
-        tem_diarios = any(banners.get(t) for t in DAILY_BANNER_TYPES)
-
-        if not tem_mensais and not tem_diarios:
-            # Sem banners → responde com texto de promoções
-            reply = generate_promocoes_response(text)
-            send_whatsapp_message(remote_jid, reply)
-        elif tem_mensais and tem_diarios:
-            # Tem os dois tipos → pergunta ao cliente
-            pergunta = (
-                "Temos dois tipos de encartes disponíveis:\n\n"
-                "1️⃣ *Encartes Mensais* — nossos folhetos completos do mês\n"
-                "2️⃣ *Folheto de Hoje* — a oferta válida para hoje\n\n"
-                "Qual você prefere? Responda *1* para Mensais ou *2* para o de Hoje."
-            )
-            send_whatsapp_message(remote_jid, pergunta)
-            save_context(remote_jid, 'awaiting_promo_choice', {})
-        elif tem_mensais:
-            # Só mensais → envia todos direto
-            for url in get_monthly_banner_urls():
-                send_whatsapp_image(remote_jid, url)
+        texto_norm = normalize_text(text)
+        periodo = _detectar_periodo_promo(texto_norm)
+        if periodo == 'dia':
+            _enviar_promo_dia(remote_jid)
+        elif periodo == 'semana':
+            _enviar_promo_semana(remote_jid)
+        elif periodo == 'mes':
+            _enviar_promo_mes(remote_jid)
         else:
-            # Só diário → envia o do dia
-            url_diario = get_daily_banner_for_today()
-            if url_diario:
-                send_whatsapp_image(remote_jid, url_diario)
-            else:
-                send_whatsapp_message(remote_jid, "Não temos o folheto de hoje disponível ainda.")
+            _enviar_menu_promocoes(remote_jid)
         return jsonify({"status": "promotions_sent"}), 200
 
     elif intencao == 'consulta_produto':
@@ -4925,31 +4956,16 @@ def webhook():
                     return jsonify({"status": "product_unavailable_scope"}), 200
 
                 elif intencao == 'promocoes':
-                    banners = get_banner_urls()
-                    tem_mensais = any(banners.get(t) for t in MONTHLY_BANNER_TYPES)
-                    tem_diarios = any(banners.get(t) for t in DAILY_BANNER_TYPES)
-
-                    if not tem_mensais and not tem_diarios:
-                        reply = generate_promocoes_response(text)
-                        send_whatsapp_message(remote_jid, reply)
-                    elif tem_mensais and tem_diarios:
-                        pergunta = (
-                            "Temos dois tipos de encartes disponíveis:\n\n"
-                            "1️⃣ *Encartes Mensais* — nossos folhetos completos do mês\n"
-                            "2️⃣ *Folheto de Hoje* — a oferta válida para hoje\n\n"
-                            "Qual você prefere? Responda *1* para Mensais ou *2* para o de Hoje."
-                        )
-                        send_whatsapp_message(remote_jid, pergunta)
-                        save_context(remote_jid, 'awaiting_promo_choice', {})
-                    elif tem_mensais:
-                        for url in get_monthly_banner_urls():
-                            send_whatsapp_image(remote_jid, url)
+                    texto_norm = normalize_text(text)
+                    periodo = _detectar_periodo_promo(texto_norm)
+                    if periodo == 'dia':
+                        _enviar_promo_dia(remote_jid)
+                    elif periodo == 'semana':
+                        _enviar_promo_semana(remote_jid)
+                    elif periodo == 'mes':
+                        _enviar_promo_mes(remote_jid)
                     else:
-                        url_diario = get_daily_banner_for_today()
-                        if url_diario:
-                            send_whatsapp_image(remote_jid, url_diario)
-                        else:
-                            send_whatsapp_message(remote_jid, "Não temos o folheto de hoje disponível ainda.")
+                        _enviar_menu_promocoes(remote_jid)
                     return jsonify({"status": "promotions_sent"}), 200
 
                 elif intencao == 'consulta_produto':
