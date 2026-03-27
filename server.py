@@ -2206,17 +2206,29 @@ def detectar_intencao(texto):
     if any(p in texto_norm for p in PROMO_KEYWORDS_NORMALIZED):
         return 'promocoes'
 
+    if classificar_sentimento(texto) in ['Urgente', 'Critico']:
+        return 'feedback'
+
+    # Só dispara estrutura_local se for PERGUNTA informativa, não reclamação
     ESTRUTURA_KEYWORDS = (
         'estacionamento', 'vaga', 'estacionar', 'banheiro', 'elevador',
         'escada', 'rampa', 'acessibilidade', 'cadeirante', 'estrutura',
         'carrinho', 'cesta', 'sacola', 'entrada', 'saida', 'portaria',
         'ar condicionado', 'bebedouro', 'wifi', 'wi-fi',
     )
-    if any(p in texto_norm for p in ESTRUTURA_KEYWORDS):
+    RECLAMACAO_INDICATORS = (
+        'sujo', 'suja', 'imundo', 'imunda', 'nojento', 'nojenta',
+        'molhado', 'molhada', 'quebrado', 'quebrada', 'estragado', 'estragada',
+        'ruim', 'pessimo', 'pessima', 'horrivel', 'fedido', 'fedida',
+        'fede', 'cheiro', 'lixo', 'podre', 'entupido', 'entupida',
+        'sem papel', 'sem sabonete', 'sem agua', 'travado', 'travada',
+        'enferrujado', 'enferrujada', 'roda quebrada', 'roda travada',
+        'absurdo', 'descaso', 'vergonha', 'desrespeito',
+    )
+    tem_estrutura = any(p in texto_norm for p in ESTRUTURA_KEYWORDS)
+    tem_reclamacao = any(p in texto_norm for p in RECLAMACAO_INDICATORS)
+    if tem_estrutura and not tem_reclamacao:
         return 'estrutura_local'
-
-    if classificar_sentimento(texto) in ['Urgente', 'Critico']:
-        return 'feedback'
 
     if looks_like_product_inquiry(texto_norm):
         return 'consulta_indisponivel'
