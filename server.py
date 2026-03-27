@@ -2849,25 +2849,6 @@ Gere uma resposta curta de {AGENT_NAME}.
             reply = "Obrigado por me contar. Ja deixei seu registro salvo para acompanhamento."
         return finalize_marcia_reply(reply, urgency, category, text)
 
-def save_context(remote_jid, state, data=None):
-    """Salva estado pendente da conversa por número."""
-    conversation_context[remote_jid] = {
-        'state': state,
-        'intent': state,
-        'data': data or {},
-        'timestamp': time_now()
-    }
-
-def get_context(remote_jid):
-    """Retorna contexto ativo se existir e não estiver expirado."""
-    ctx = conversation_context.get(remote_jid)
-    if ctx and (time_now() - ctx['timestamp']) < CONTEXT_TTL:
-        return ctx
-    conversation_context.pop(remote_jid, None)
-    return None
-
-def clear_context(remote_jid):
-    conversation_context.pop(remote_jid, None)
 
 def is_negative_reply(text):
     negative = {
@@ -3561,7 +3542,7 @@ RATE_LIMIT_WINDOW = 600
 # --- CONVERSATION CONTEXT MEMORY ---
 # Stores last interaction per sender to handle follow-up replies
 conversation_context = {}
-CONTEXT_TTL = 300  # 5 minutes
+CONTEXT_TTL = 600  # 10 minutes
 
 def get_context_path(remote_jid):
     os.makedirs(CONTEXT_STATE_DIR, exist_ok=True)
