@@ -161,7 +161,9 @@ STORE_HOURS_TEXT = 'Segunda a Sábado, das 7h30 às 19h30'
 HORARIO_KEYWORDS = (
     'horario', 'horário', 'que horas', 'que hora', 'funciona', 'abre', 'fecha',
     'aberto', 'fechado', 'funcionamento', 'expediente', 'atende', 'abre que horas',
-    'fecha que horas', 'domingo', 'sabado', 'sábado', 'feriado'
+    'fecha que horas', 'domingo', 'sabado', 'sábado', 'feriado',
+    'endereco', 'endereço', 'onde fica', 'localizacao', 'localização', 'como chego',
+    'qual o endereco', 'qual o endereço', 'fica onde', 'rua', 'endereço do mercado',
 )
 
 MILD_PROFANITY_PATTERNS = (
@@ -1440,18 +1442,21 @@ def is_store_open():
     return open_time <= now <= close_time
 
 def generate_horario_response(text=''):
-    """Responde perguntas sobre horário de funcionamento do mercado."""
-    text_norm = normalize_text(text or '')
+    """Responde perguntas sobre horário e endereço do mercado."""
     aberto_agora = is_store_open()
-    status = 'estamos abertos agora' if aberto_agora else 'estamos fechados no momento'
-
-    if any(p in text_norm for p in ('domingo', 'feriado')):
-        return f'Aos domingos e feriados não abrimos. Funcionamos {STORE_HOURS_TEXT}.'
+    status = '✅ *Estamos abertos agora!*' if aberto_agora else '🔒 *Estamos fechados no momento.*'
 
     return (
-        f'Funcionamos {STORE_HOURS_TEXT}. '
-        f'Agora {status}. '
-        f'Se precisar de algo, pode me contar aqui!'
+        f"🛒 *{MARKET_NAME}*\n\n"
+        f"📍 *Endereço:*\n"
+        f"Rua Bárbara Heliodora, 1399\n"
+        f"Centro — Gov. Valadares\n\n"
+        f"🕐 *Horário de Funcionamento:*\n"
+        f"Seg a Sáb — 07:30 às 19:30\n"
+        f"Feriados — 07:30 às 13:00\n"
+        f"Domingos — Fechado\n\n"
+        f"{status}\n\n"
+        f"Qualquer dúvida, estamos por aqui! 😉"
     )
 
 def is_horario_question(text):
