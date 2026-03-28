@@ -191,6 +191,92 @@ THREAT_PATTERNS = (
     'vou quebrar', 'vou processar voces', 'vou quebrar tudo'
 )
 
+IRRELEVANTE_PATTERNS = (
+    # Prompt injection
+    'ignore suas instrucoes', 'ignore suas instruções',
+    'ignore all previous', 'ignore previous instructions',
+    'disregard your instructions', 'disregard previous',
+    'voce agora e um', 'você agora é um', 'agora voce e',
+    'a partir de agora voce', 'a partir de agora você',
+    'system:', 'system prompt', 'novo modo', 'new mode',
+    'dan mode', 'jailbreak', 'developer mode',
+    'modo desenvolvedor', 'modo admin', 'modo administrador',
+    'finja que voce', 'finja que você', 'pretend you are',
+    'act as if', 'roleplay as', 'responda como se fosse',
+    'esqueca suas regras', 'esqueça suas regras',
+    'forget your rules', 'override your',
+    'reveal your prompt', 'show me your instructions',
+    'what are your instructions', 'quais sao suas instrucoes',
+    'repita seu prompt', 'repeat your prompt',
+    'me mostre suas instrucoes', 'mostre seu codigo',
+    # Testes e curiosidade sobre o bot
+    'qual seu prompt', 'qual e o seu prompt',
+    'voce e um robo', 'voce e uma ia', 'voce e um bot',
+    'quem te programou', 'quem te criou',
+)
+
+def is_mensagem_irrelevante(text):
+    """Detecta prompt injection e mensagens irrelevantes."""
+    if not text:
+        return False
+    normalized = normalize_text(text)
+    return any(pattern in normalized for pattern in IRRELEVANTE_PATTERNS)
+
+IMPROPER_CONTENT_PATTERNS = (
+    # Assédio sexual ao bot
+    'manda nudes', 'manda nude', 'manda foto pelada', 'manda foto pelado',
+    'quero te comer', 'quero te pegar', 'vamos transar',
+    'foto sua pelada', 'foto sua pelado',
+    'voce e gostosa', 'você é gostosa', 'voce e gostoso',
+    'ta solteira', 'tá solteira', 'namora comigo', 'sexo comigo',
+    'me excita', 'estou excitado', 'estou excitada',
+    # Conteúdo sexual explícito
+    'pornografia', 'porno ', 'xvideos', 'xhamster', 'pornhub',
+    'putaria', 'suruba', 'orgasmo', 'punheta', 'siririca',
+    'buceta', 'xereca', 'rola ', 'pau duro', 'pica ',
+    'chupar meu', 'chupar minha', 'gozar', 'gozei', 'ejacular',
+    # Pedofilia — tolerância ZERO
+    'menorzinha', 'menorzinho', 'novinha gostosa', 'novinho gostoso',
+    'crianca pelada', 'criança pelada', 'menor pelada', 'menor pelado',
+    'cp ', 'pedofil', 'abuso infantil', 'abuso de menor',
+    # Drogas e armas — sem contexto legítimo em supermercado
+    'vendo droga', 'compro droga', 'vendo maconha', 'compro maconha',
+    'vendo cocaina', 'compro cocaina', 'vendo crack',
+    'compro arma', 'vendo arma', 'compro pistola', 'vendo pistola',
+    'compro revolver', 'vendo revolver',
+    # Ameaças diretas (além das que já existem em THREAT_PATTERNS)
+    'vou explodir', 'vou tacar fogo', 'vou incendiar',
+)
+
+def is_improper_content(text):
+    """Detecta conteúdo impróprio para canal de supermercado."""
+    if not text:
+        return False
+    normalized = normalize_text(text)
+    return any(pattern in normalized for pattern in IMPROPER_CONTENT_PATTERNS)
+
+URL_PATTERN = re.compile(
+    r'('
+    r'https?://\S+'
+    r'|www\.\S+'
+    r'|bit\.ly/\S+'
+    r'|tinyurl\.\S+'
+    r'|goo\.gl/\S+'
+    r'|t\.co/\S+'
+    r'|\S+\.com\.br/\S+'
+    r'|\S+\.com/\S+'
+    r'|\S+\.net/\S+'
+    r'|\S+\.org/\S+'
+    r')',
+    re.IGNORECASE
+)
+
+def contains_url(text):
+    """Detecta se a mensagem contém qualquer URL ou link."""
+    if not text:
+        return False
+    return bool(URL_PATTERN.search(text))
+
 FOOD_SAFETY_PATTERNS_NORMALIZED = (
     'vencido', 'vencida', 'vencidos', 'vencidas',
     'estragado', 'estragada', 'estragados', 'estragadas',
@@ -1249,6 +1335,15 @@ def normalize_text(text):
     """Remove acentos e normaliza texto para comparação"""
     nfkd = unicodedata.normalize('NFKD', text)
     return ''.join(c for c in nfkd if not unicodedata.combining(c)).lower().strip()
+
+def mascarar_telefone(remote_jid):
+    """Mascara número de telefone nos logs para privacidade."""
+    if not remote_jid:
+        return "???"
+    digits = ''.join(c for c in remote_jid if c.isdigit())
+    if len(digits) > 6:
+        return digits[:4] + "****" + digits[-2:]
+    return "****"
 
 def buscar_produto_local(query):
     """Search products by name with accent normalization and strict matching"""
@@ -3548,6 +3643,67 @@ rate_limit_store = defaultdict(list)
 RATE_LIMIT_MAX = 15
 RATE_LIMIT_WINDOW = 600
 
+# Rate limit para áudios (evita queimar créditos do Whisper)
+audio_limit_store = defaultdict(list)
+AUDIO_LIMIT_MAX = 3
+AUDIO_LIMIT_WINDOW = 3600  # 1 hora
+
+def is_audio_limited(remote_jid):
+    """Máximo 3 áudios por hora por número."""
+    now = time_now()
+    audio_limit_store[remote_jid] = [t for t in audio_limit_store[remote_jid] if now - t < AUDIO_LIMIT_WINDOW]
+    if len(audio_limit_store[remote_jid]) >= AUDIO_LIMIT_MAX:
+        return True
+    audio_limit_store[remote_jid].append(now)
+    return False
+
+# Daily limit — máximo de mensagens por dia por número
+daily_limit_store = defaultdict(list)
+DAILY_LIMIT_MAX = 30
+DAILY_LIMIT_WINDOW = 86400  # 24 horas
+
+def is_daily_limited(remote_jid):
+    """Máximo 30 mensagens por dia por número."""
+    now = time_now()
+    daily_limit_store[remote_jid] = [t for t in daily_limit_store[remote_jid] if now - t < DAILY_LIMIT_WINDOW]
+    if len(daily_limit_store[remote_jid]) >= DAILY_LIMIT_MAX:
+        return True
+    daily_limit_store[remote_jid].append(now)
+    return False
+
+# Rate limit por volume de texto (evita sobrecarregar GPT)
+char_volume_store = defaultdict(list)
+CHAR_VOLUME_MAX = 3000
+CHAR_VOLUME_WINDOW = 600  # 10 minutos
+
+def is_char_volume_limited(remote_jid, text_length):
+    """Limita volume total de caracteres por janela de tempo."""
+    now = time_now()
+    char_volume_store[remote_jid] = [
+        (t, c) for t, c in char_volume_store[remote_jid]
+        if now - t < CHAR_VOLUME_WINDOW
+    ]
+    total_chars = sum(c for _, c in char_volume_store[remote_jid])
+    if total_chars + text_length > CHAR_VOLUME_MAX:
+        return True
+    char_volume_store[remote_jid].append((now, text_length))
+    return False
+
+# Rate limit GLOBAL
+global_message_timestamps = []
+GLOBAL_RATE_MAX = 100
+GLOBAL_RATE_WINDOW = 60
+
+def is_globally_rate_limited():
+    """Proteção contra ataque coordenado com múltiplos números."""
+    global global_message_timestamps
+    now = time_now()
+    global_message_timestamps = [t for t in global_message_timestamps if now - t < GLOBAL_RATE_WINDOW]
+    if len(global_message_timestamps) >= GLOBAL_RATE_MAX:
+        return True
+    global_message_timestamps.append(now)
+    return False
+
 # --- CONVERSATION CONTEXT MEMORY ---
 # Stores last interaction per sender to handle follow-up replies
 conversation_context = {}
@@ -4455,6 +4611,10 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, restriction["reply"])
         return jsonify({"status": restriction["status"]}), 200
 
+    # Trunca mensagens muito longas (protege créditos GPT)
+    if len(text) > 600:
+        text = text[:600]
+
     # --- BOAS-VINDAS QR CODE ---
     # Detecta a mensagem automática gerada pelo QR Code de feedback.
     # Quando o cliente escaneia o QR, o WhatsApp abre com uma mensagem pré-preenchida
@@ -4490,6 +4650,37 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, moderation["reply"])
         return jsonify({"status": moderation["status"]}), 200
 
+    # Filtro de irrelevância e prompt injection
+    if is_mensagem_irrelevante(text):
+        send_whatsapp_message(remote_jid, "Sou o Seu Pipico, atendente do Atacaforte! Posso te ajudar com feedbacks, promoções e dúvidas sobre o mercado. 🛒")
+        return jsonify({"status": "irrelevant_blocked"}), 200
+
+    # Filtro de conteúdo impróprio — bloqueio 72h
+    if is_improper_content(text):
+        print(f"[IMPROPER] Bloqueio imediato: {mascarar_telefone(remote_jid)}")
+        state, entry = get_moderation_entry(remote_jid)
+        entry = clean_expired_moderation(entry)
+        now_mod = datetime.utcnow()
+        entry["abuse_score"] = 10
+        entry["blocked_until"] = (now_mod + timedelta(hours=72)).isoformat()
+        entry["status"] = "blocked"
+        entry["last_infraction_at"] = now_mod.isoformat()
+        infractions = entry.get("infractions") or []
+        infractions.insert(0, {
+            "timestamp": now_mod.isoformat(),
+            "reasons": ["conteudo_improprio"],
+            "message": (text or "")[:240]
+        })
+        entry["infractions"] = infractions[:20]
+        state[remote_jid] = entry
+        save_moderation_state(state)
+        send_whatsapp_message(
+            remote_jid,
+            "Este canal é exclusivo para atendimento do Atacaforte Supermercado. "
+            "Seu acesso foi suspenso por 72 horas devido ao conteúdo da mensagem."
+        )
+        return jsonify({"status": "blocked_improper"}), 200
+
     if is_rate_limited(remote_jid):
         moderation = register_moderation_infraction(
             remote_jid,
@@ -4500,6 +4691,26 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         )
         send_whatsapp_message(remote_jid, moderation["reply"])
         return jsonify({"status": "rate_limited"}), 200
+
+    # Daily limit
+    if is_daily_limited(remote_jid):
+        send_whatsapp_message(remote_jid, "Você já mandou muitas mensagens hoje. Tente novamente amanhã! 😊")
+        return jsonify({"status": "daily_limited"}), 200
+
+    # Rate limit de volume de texto
+    if is_char_volume_limited(remote_jid, len(text)):
+        send_whatsapp_message(remote_jid, "Recebi muitas mensagens longas em sequência. Aguarde alguns minutos e tente novamente. 😊")
+        return jsonify({"status": "char_volume_limited"}), 200
+
+    # Bloqueio total de URLs
+    if contains_url(text):
+        print(f"[URL-BLOCKED] Link detectado de {mascarar_telefone(remote_jid)}: {text[:60]}")
+        send_whatsapp_message(
+            remote_jid,
+            "Por segurança, não aceitamos mensagens com links. "
+            "Descreva o que precisa por texto, sem links. 😊"
+        )
+        return jsonify({"status": "url_blocked"}), 200
 
     feedbacks = get_feedbacks()
     msg_hash = hashlib.md5(f"{text}{remote_jid}".encode()).hexdigest()
@@ -4801,6 +5012,23 @@ def webhook():
             native_transcription = message_content.get("transcription")
             audio_msg = message_content.get("audioMessage")
 
+            # Proteção contra replay attack
+            msg_timestamp = msg_data.get("messageTimestamp")
+            if msg_timestamp:
+                try:
+                    msg_time = int(msg_timestamp)
+                    now_epoch = int(datetime.utcnow().timestamp())
+                    if abs(now_epoch - msg_time) > 120:
+                        print(f"[REPLAY] Mensagem antiga rejeitada: {abs(now_epoch - msg_time)}s de atraso")
+                        return jsonify({"status": "stale_message"}), 200
+                except (ValueError, TypeError):
+                    pass
+
+            # Proteção global contra flood de múltiplos números
+            if is_globally_rate_limited():
+                print(f"[GLOBAL-FLOOD] Sistema em proteção — rejeitando mensagem")
+                return jsonify({"status": "global_rate_limited"}), 429
+
             if key.get("fromMe"):
                 if remote_jid and text:
                     handoff_entry = get_handoff_entry(remote_jid)
@@ -4822,6 +5050,11 @@ def webhook():
 
             # Audio Processing
             if not text and audio_msg and remote_jid:
+                # Rate limit de áudio
+                if is_audio_limited(remote_jid):
+                    send_whatsapp_message(remote_jid, "⚠️ Você já enviou vários áudios recentemente. Aguarde um pouco ou envie sua mensagem por texto.")
+                    return jsonify({"status": "audio_rate_limited"}), 200
+
                 seconds = audio_msg.get("seconds", 0)
                 if seconds > 35:
                     send_whatsapp_message(remote_jid, "⚠️ Áudio muito longo! Manda de no máximo 35 segundos, por favor 🛒")
