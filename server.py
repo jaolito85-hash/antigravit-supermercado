@@ -133,8 +133,9 @@ GENERAL_QUESTION_HINTS = (
 
 PROMO_KEYWORDS_NORMALIZED = (
     'oferta', 'ofertas', 'promocao', 'promocoes',
-    'promocao da semana', 'promocoes da semana',
-    'promocao do dia', 'promocoes do dia', 'desconto', 'encarte'
+    'promocao do dia', 'promocoes do dia',
+    'promocao do mes', 'promocoes do mes',
+    'desconto', 'encarte'
 )
 
 PRODUCT_INQUIRY_PATTERNS_NORMALIZED = (
@@ -738,8 +739,6 @@ def _detectar_periodo_promo(texto_norm):
     """Detecta se o cliente especificou um período de promoção no texto normalizado."""
     if any(p in texto_norm for p in ('do dia', 'de hoje', 'diaria', 'diario')):
         return 'dia'
-    if any(p in texto_norm for p in ('da semana', 'semanal', 'semanais')):
-        return 'semana'
     if any(p in texto_norm for p in ('do mes', 'mensal', 'mensais', 'encarte')):
         return 'mes'
     return None
@@ -757,29 +756,6 @@ def _enviar_promo_dia(remote_jid):
     else:
         send_whatsapp_message(remote_jid, "Não temos promoções do dia disponíveis no momento. Fique de olho que logo atualizamos! 👀")
 
-def _get_all_daily_banner_urls() -> list:
-    """Retorna lista de tuplas (label, url) dos 3 banners diários cadastrados."""
-    banners = get_banner_urls()
-    daily_map = [
-        (BANNER_DAILY_SEG_TER, "📅 *Segunda e Terça*"),
-        (BANNER_DAILY_QUA_QUI, "📅 *Quarta e Quinta*"),
-        (BANNER_DAILY_SEX_SAB, "📅 *Sexta e Sábado*"),
-    ]
-    return [(label, banners[t]) for t, label in daily_map if banners.get(t)]
-
-def _enviar_promo_semana(remote_jid):
-    """Envia promoções da semana: os 3 banners diários (seg-ter, qua-qui, sex-sab)."""
-    daily_banners = _get_all_daily_banner_urls()
-
-    if not daily_banners:
-        send_whatsapp_message(remote_jid, "Não temos promoções da semana disponíveis no momento. Fique de olho que logo atualizamos! 👀")
-        return
-
-    send_whatsapp_message(remote_jid, f"🛒 *Promoções da semana no {MARKET_NAME}:*")
-
-    for label, url in daily_banners:
-        send_whatsapp_image(remote_jid, url, caption=label)
-
 def _enviar_promo_mes(remote_jid):
     """Envia promoções do mês (encartes mensais) para o cliente."""
     urls_mensais = get_monthly_banner_urls()
@@ -795,9 +771,8 @@ def _enviar_menu_promocoes(remote_jid):
         "🛒 *Temos promoções pra você!*\n\n"
         "Qual tipo de promoção quer ver?\n\n"
         "1️⃣ *Promoções do Dia*\n"
-        "2️⃣ *Promoções da Semana*\n"
-        "3️⃣ *Promoções do Mês*\n\n"
-        "Responda *1*, *2* ou *3*"
+        "2️⃣ *Promoções do Mês*\n\n"
+        "Responda *1* ou *2*"
     )
     send_whatsapp_message(remote_jid, menu)
     save_context(remote_jid, 'awaiting_promo_choice', {})
@@ -3126,19 +3101,15 @@ def process_context_followup(remote_jid, push_name, text):
     if state == 'awaiting_promo_choice':
         texto_norm = normalize_text(text)
         quer_dia = any(p in texto_norm for p in ('1', 'dia', 'hoje', 'diaria', 'diario'))
-        quer_semana = any(p in texto_norm for p in ('2', 'semana', 'semanal', 'semanais'))
-        quer_mes = any(p in texto_norm for p in ('3', 'mes', 'mensal', 'mensais', 'encarte'))
+        quer_mes = any(p in texto_norm for p in ('2', 'mes', 'mensal', 'mensais', 'encarte'))
 
-        escolhas = sum([quer_dia, quer_semana, quer_mes])
+        escolhas = sum([quer_dia, quer_mes])
 
         if escolhas == 1:
             clear_context(remote_jid)
             if quer_dia:
                 _enviar_promo_dia(remote_jid)
                 return {"reply": None, "status": "daily_promo_sent"}
-            elif quer_semana:
-                _enviar_promo_semana(remote_jid)
-                return {"reply": None, "status": "weekly_promo_sent"}
             elif quer_mes:
                 _enviar_promo_mes(remote_jid)
                 return {"reply": None, "status": "monthly_promo_sent"}
@@ -3148,8 +3119,7 @@ def process_context_followup(remote_jid, push_name, text):
             "reply": (
                 "Desculpe, não entendi bem. Responda:\n\n"
                 "1️⃣ *1* para Promoções do Dia\n"
-                "2️⃣ *2* para Promoções da Semana\n"
-                "3️⃣ *3* para Promoções do Mês"
+                "2️⃣ *2* para Promoções do Mês"
             ),
             "status": "awaiting_promo_choice"
         }
@@ -4541,7 +4511,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     promo_choice_context = bool(
         ctx
         and (ctx.get('state') or ctx.get('intent')) == 'awaiting_promo_choice'
-        and normalize_text(text or "") in {'1', '2', '3'}
+        and normalize_text(text or "") in {'1', '2'}
     )
     if msg_hash in existing and not promo_choice_context:
         return jsonify({"status": "ignored_duplicate"}), 200
@@ -4648,8 +4618,6 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         periodo = _detectar_periodo_promo(texto_norm)
         if periodo == 'dia':
             _enviar_promo_dia(remote_jid)
-        elif periodo == 'semana':
-            _enviar_promo_semana(remote_jid)
         elif periodo == 'mes':
             _enviar_promo_mes(remote_jid)
         else:
@@ -4990,8 +4958,6 @@ def webhook():
                     periodo = _detectar_periodo_promo(texto_norm)
                     if periodo == 'dia':
                         _enviar_promo_dia(remote_jid)
-                    elif periodo == 'semana':
-                        _enviar_promo_semana(remote_jid)
                     elif periodo == 'mes':
                         _enviar_promo_mes(remote_jid)
                     else:
