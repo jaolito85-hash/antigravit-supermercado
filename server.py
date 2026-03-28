@@ -1428,11 +1428,10 @@ def get_lista_espera_count():
 
 def is_store_open():
     """Verifica se o mercado está aberto agora com base no horário configurado."""
-    from datetime import datetime
-    import pytz
+    from datetime import datetime, timezone, timedelta
     try:
-        tz = pytz.timezone('America/Sao_Paulo')
-        now = datetime.now(tz)
+        tz_brasilia = timezone(timedelta(hours=-3))
+        now = datetime.now(tz_brasilia)
     except Exception:
         now = datetime.now()
     if now.weekday() not in STORE_OPEN_DAYS:
