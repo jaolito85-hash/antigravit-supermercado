@@ -5173,6 +5173,171 @@ def debug_env():
         }
     })
 
+# --- HEALTH CHECK ENDPOINT (usado pelo CRM Monitor) ---
+
+@app.route("/api/health")
+def api_health():
+    """Retorna o status de todos os serviços que o Atacaforte precisa pra funcionar.
+
+    O CRM central consulta essa rota a cada 5 min.
+    Se algo estiver 'down', o CRM manda alerta no WhatsApp.
+
+    Não precisa de login — é uma rota pública simples.
+    Mas não expõe dados sensíveis, só status up/down.
+    """
+    import time as _time
+    results = {}
+    overall = "up"
+
+    # 1. SUPABASE — Tenta fazer um SELECT simples
+    #    Se falhar, os feedbacks não serão salvos
+    try:
+        _start = _time.time()
+        sb = get_supabase()
+        if sb:
+            resp = sb.table('feedbacks').select('id').limit(1).execute()
+            _ms = int((_time.time() - _start) * 1000)
+            results["supabase"] = {
+                "status": "up",
+                "ms": _ms,
+                "detail": f"{len(resp.data)} rows returned"
+            }
+        else:
+            results["supabase"] = {"status": "down", "ms": None, "detail": "Client not configured"}
+            overall = "degraded"
+    except Exception as e:
+        results["supabase"] = {"status": "down", "ms": None, "detail": str(e)[:120]}
+        overall = "degraded"
+
+    # 2. EVOLUTION API — Verifica se a instância WhatsApp está conectada
+    #    Se falhar, o Pipico não consegue enviar/receber mensagens
+    try:
+        _start = _time.time()
+        evo_url = os.getenv("EVOLUTION_API_URL", "")
+        evo_key = os.getenv("EVOLUTION_API_KEY", "")
+        evo_instance = os.getenv("EVOLUTION_INSTANCE_NAME", "")
+
+        if evo_url and evo_key and evo_instance:
+            resp = requests.get(
+                f"{evo_url}/instance/connectionState/{evo_instance}",
+                headers={"apikey": evo_key},
+                timeout=10
+            )
+            _ms = int((_time.time() - _start) * 1000)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                state = "unknown"
+                if isinstance(data, dict):
+                    state = data.get("state") or data.get("instance", {}).get("state", "unknown")
+
+                is_connected = state in ("open", "connected")
+                results["evolution"] = {
+                    "status": "up" if is_connected else "warning",
+                    "ms": _ms,
+                    "detail": f"Instance '{evo_instance}' state: {state}",
+                    "connected": is_connected
+                }
+                if not is_connected:
+                    overall = "degraded"
+            else:
+                results["evolution"] = {
+                    "status": "down",
+                    "ms": _ms,
+                    "detail": f"HTTP {resp.status_code}: {resp.text[:80]}"
+                }
+                overall = "degraded"
+        else:
+            results["evolution"] = {"status": "down", "ms": None, "detail": "Not configured"}
+            overall = "degraded"
+    except Exception as e:
+        results["evolution"] = {"status": "down", "ms": None, "detail": str(e)[:120]}
+        overall = "degraded"
+
+    # 3. OPENAI — Testa se a chave está válida (sem gastar tokens)
+    #    Se falhar, o Pipico não consegue classificar nem responder
+    try:
+        _start = _time.time()
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+
+        if openai_key:
+            resp = requests.get(
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                timeout=10
+            )
+            _ms = int((_time.time() - _start) * 1000)
+
+            if resp.status_code == 200:
+                results["openai"] = {"status": "up", "ms": _ms, "detail": "API key valid"}
+            else:
+                results["openai"] = {"status": "down", "ms": _ms, "detail": f"HTTP {resp.status_code}"}
+                overall = "degraded"
+        else:
+            results["openai"] = {"status": "down", "ms": None, "detail": "API key not set"}
+            overall = "degraded"
+    except Exception as e:
+        results["openai"] = {"status": "down", "ms": None, "detail": str(e)[:120]}
+        overall = "degraded"
+
+    # 4. PRODUTOS — Verifica se tem produtos cadastrados
+    #    O Pipico precisa disso para responder consultas de preço
+    try:
+        produtos = get_produtos()
+        results["produtos"] = {
+            "status": "up" if produtos else "warning",
+            "total": len(produtos) if produtos else 0,
+            "detail": f"{len(produtos)} produtos" if produtos else "Nenhum produto cadastrado"
+        }
+    except Exception as e:
+        results["produtos"] = {"status": "error", "detail": str(e)[:120]}
+
+    # 5. FEEDBACKS COUNT — Métricas de sanidade
+    try:
+        feedbacks = get_feedbacks()
+        total = len(feedbacks) if feedbacks else 0
+        abertos = sum(1 for f in (feedbacks or []) if f.get('status', 'aberto') != 'resolvido')
+        criticos = sum(1 for f in (feedbacks or []) if f.get('urgency') in ['Critico', 'Crítico', 'Urgente'])
+        results["feedbacks"] = {
+            "status": "up",
+            "total": total,
+            "abertos": abertos,
+            "criticos": criticos
+        }
+    except Exception as e:
+        results["feedbacks"] = {"status": "error", "detail": str(e)[:120]}
+
+    # 6. PROMOÇÕES — Verifica se tem promoções cadastradas
+    #    Importante pro Pipico responder perguntas sobre ofertas
+    try:
+        promos = get_promotions_from_config()
+        has_day = bool((promos.get("day") or "").strip())
+        has_week = bool((promos.get("week") or "").strip())
+        results["promocoes"] = {
+            "status": "up" if (has_day or has_week) else "warning",
+            "dia": has_day,
+            "semana": has_week,
+            "detail": f"Dia: {'sim' if has_day else 'não'}, Semana: {'sim' if has_week else 'não'}"
+        }
+    except Exception as e:
+        results["promocoes"] = {"status": "error", "detail": str(e)[:120]}
+
+    # Overall: se serviço crítico está down, tudo é down
+    critical_services = ["supabase", "evolution"]
+    for svc in critical_services:
+        if results.get(svc, {}).get("status") == "down":
+            overall = "down"
+            break
+
+    return jsonify({
+        "project": "atacaforte_supermercado",
+        "project_name": "Atacaforte (Seu Pipico)",
+        "port": 5003,
+        "overall": overall,
+        "checked_at": datetime.utcnow().isoformat(),
+        "services": results
+    })
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5003))
     print(f"🛒 Supermercado Node Data running on port {port}")
