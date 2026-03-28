@@ -613,7 +613,7 @@
 
         .promotions-shell {
             display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
+            grid-template-columns: 1fr;
             gap: 24px;
             align-items: start;
         }
@@ -1834,9 +1834,8 @@
                         <div class="promo-kicker"><i class="ri-flashlight-line"></i> Operação comercial</div>
                         <h2>O Atacaforte edita aqui. O Seu Pipico já usa na próxima conversa.</h2>
                         <p>
-                            Preencha as promoções do dia e da semana do jeito que o mercado prefere divulgar. Assim
-                            que salvar, o atendimento no WhatsApp passa a responder com esse texto sem depender de
-                            deploy ou alteração em `.env`.
+                            Preencha as promoções do dia do jeito que o mercado prefere divulgar. Assim
+                            que salvar, o Seu Pipico já usa na próxima conversa com o cliente.
                         </p>
                     </div>
                     <div>
@@ -2063,40 +2062,6 @@
                 </div>
             </section>
 
-            <aside class="promo-side">
-                <section class="promo-preview-card">
-                    <h3>Preview da conversa</h3>
-                    <p>Veja como a resposta sai no WhatsApp quando o cliente pergunta por promoções.</p>
-                    <div class="promo-preview-stack">
-                        <div class="promo-preview-bubble owner">
-                            <div class="promo-preview-label"><i class="ri-user-3-line"></i> Cliente</div>
-                            Quais promoções vocês estão com hoje?
-                        </div>
-                        <div class="promo-preview-bubble agent" id="promotions-preview-response">
-                            Ainda não recebi as promoções atualizadas. Se quiser, já deixo sua mensagem registrada para a equipe conferir.
-                        </div>
-                    </div>
-                </section>
-
-                <section class="promo-guide-card">
-                    <h3>Como preencher melhor</h3>
-                    <p>Quanto mais direto o texto, melhor a resposta no WhatsApp.</p>
-                    <div class="promo-guide-list">
-                        <div class="promo-guide-item">
-                            <i class="ri-check-line"></i>
-                            <div>Uma oferta por linha costuma ficar mais legível para o cliente e para o preview.</div>
-                        </div>
-                        <div class="promo-guide-item">
-                            <i class="ri-check-line"></i>
-                            <div>Se a promoção for só do dia, deixe o campo semanal como está e atualize apenas o do dia.</div>
-                        </div>
-                        <div class="promo-guide-item">
-                            <i class="ri-check-line"></i>
-                            <div>Se o mercado não quiser divulgar nada em um período, deixe o campo vazio e o Seu Pipico não inventa promoção.</div>
-                        </div>
-                    </div>
-                </section>
-            </aside>
         </div>
     </div>
 
