@@ -6,6 +6,7 @@ import csv
 import re
 import unicodedata
 import time
+import threading
 from difflib import SequenceMatcher
 from io import StringIO
 from contextlib import contextmanager
@@ -4899,6 +4900,49 @@ def api_analytics_churn():
 
 # --- WEBHOOK ---
 
+# Debounce: acumula mensagens do mesmo remetente por N segundos antes de processar.
+# Evita que "Oi" + "Boa noite" enviados em sequência sejam tratados como 2 mensagens separadas.
+_message_buffer = {}
+_message_buffer_lock = threading.Lock()
+MESSAGE_BATCH_DELAY = 3  # segundos de espera para juntar mensagens
+
+
+def _flush_message_buffer(remote_jid):
+    """Processa todas as mensagens acumuladas do remetente após o delay."""
+    with _message_buffer_lock:
+        entry = _message_buffer.pop(remote_jid, None)
+    if not entry:
+        return
+    combined_text = " ".join(entry["messages"])
+    push_name = entry["push_name"]
+    is_audio = entry.get("is_audio", False)
+    try:
+        with app.app_context():
+            process_webhook_text_message(remote_jid, push_name, combined_text, is_audio=is_audio)
+    except Exception as e:
+        print(f"[DEBOUNCE] Erro ao processar buffer de {mascarar_telefone(remote_jid)}: {e}")
+
+
+def buffer_and_process_message(remote_jid, push_name, text, is_audio=False):
+    """Acumula mensagens do mesmo remetente e processa após delay de debounce."""
+    with _message_buffer_lock:
+        if remote_jid in _message_buffer:
+            _message_buffer[remote_jid]["timer"].cancel()
+            _message_buffer[remote_jid]["messages"].append(text)
+            if is_audio:
+                _message_buffer[remote_jid]["is_audio"] = True
+            print(f"[DEBOUNCE] +1 msg para {mascarar_telefone(remote_jid)} (total: {len(_message_buffer[remote_jid]['messages'])})")
+        else:
+            _message_buffer[remote_jid] = {
+                "messages": [text],
+                "push_name": push_name,
+                "is_audio": is_audio,
+            }
+        timer = threading.Timer(MESSAGE_BATCH_DELAY, _flush_message_buffer, args=[remote_jid])
+        _message_buffer[remote_jid]["timer"] = timer
+        timer.start()
+
+
 def process_webhook_text_message(remote_jid, push_name, text, is_audio=False):
     with sender_processing_lock(remote_jid) as lock_acquired:
         if not lock_acquired:
@@ -5440,7 +5484,8 @@ def webhook():
                         return jsonify({"status": "download_failed"}), 200
 
             if text and remote_jid:
-                return process_webhook_text_message(remote_jid, push_name, text, is_audio=bool(audio_msg))
+                buffer_and_process_message(remote_jid, push_name, text, is_audio=bool(audio_msg))
+                return jsonify({"status": "buffered"}), 200
                 restriction = get_active_restriction(remote_jid)
                 if restriction:
                     send_whatsapp_message(remote_jid, restriction["reply"])
