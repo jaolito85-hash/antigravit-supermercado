@@ -2589,8 +2589,10 @@ WRAP_UP_PATTERNS = {
     'era isso', 'era isso mesmo', 'e isso', 'é isso', 'e isso mesmo', 'é isso mesmo',
     'era so isso mesmo', 'era só isso mesmo',
     # despedidas
-    'tchau', 'tchauu', 'tchauzinho', 'ate mais', 'até mais', 'ate logo', 'até logo',
+    'tchau', 'tchauu', 'tchauzinho', 'xau', 'xauu',
+    'ate mais', 'até mais', 'ate logo', 'até logo', 'ate', 'até',
     'ate breve', 'até breve', 'fui', 'fui la', 'fui lá', 'abcos', 'abs',
+    'falou', 'vlw', 'abraco', 'abraço', 'abcs',
     'boa noite', 'boa tarde', 'bom dia',
     # encerramento com agradecimento
     'ok obrigado', 'ok obrigada', 'ok valeu', 'tudo bem obrigado', 'tudo bem obrigada',
@@ -3805,6 +3807,7 @@ STICKER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static",
 STICKER_SAUDACAO = os.path.join(STICKER_DIR, "pipico-saudacao.webp")
 STICKER_PROMOCAO = os.path.join(STICKER_DIR, "pipico-promocao.webp")
 STICKER_FECHADO = os.path.join(STICKER_DIR, "pipico-fechado.webp")
+STICKER_TCHAU = os.path.join(STICKER_DIR, "pipico-tchau.webp")
 
 
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
@@ -5105,6 +5108,8 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         if active_fb and is_ambiguous_only:
             # Há conversa ativa e a msg é só "bom dia" / "tudo bem" → despedida
             import random
+            if os.path.exists(STICKER_TCHAU):
+                send_whatsapp_sticker(remote_jid, STICKER_TCHAU)
             despedidas = [
                 'Fico feliz em ajudar. Até mais! 😊',
                 'Pode contar comigo sempre. Até mais!',
@@ -5130,6 +5135,8 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
 
     if is_conversation_wrap_up(text):
         import random
+        if os.path.exists(STICKER_TCHAU):
+            send_whatsapp_sticker(remote_jid, STICKER_TCHAU)
         despedidas = [
             'Fico feliz em ajudar. Até mais! 😊',
             'Pode contar comigo sempre. Até mais!',
