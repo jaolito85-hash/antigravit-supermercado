@@ -3816,6 +3816,12 @@ STICKER_PROMOCAO = os.path.join(STICKER_DIR, "pipico-promocao.webp")
 STICKER_FECHADO = os.path.join(STICKER_DIR, "pipico-fechado.webp")
 STICKER_TCHAU = os.path.join(STICKER_DIR, "pipico-tchau.webp")
 STICKER_FEEDBACK = os.path.join(STICKER_DIR, "pipico-feedback.webp")
+STICKER_COPA = os.path.join(STICKER_DIR, "pipico-copa.webp")
+
+COPA_KEYWORDS = (
+    'copa', 'copa do mundo', 'selecao', 'seleção', 'brasil',
+    'neymar', 'ney', 'vini jr', 'vini', 'gol', 'futebol',
+)
 
 
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
@@ -5182,6 +5188,13 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 'updated_at': datetime.utcnow().isoformat()
             })
         return jsonify({'status': 'conversation_closed'}), 200
+
+    # --- STICKER TEMÁTICO: COPA ---
+    # Envia figurinha do Pipico torcedor se a mensagem mencionar futebol/copa
+    if os.path.exists(STICKER_COPA):
+        texto_copa = normalize_text(text)
+        if any(k in texto_copa for k in COPA_KEYWORDS):
+            send_whatsapp_sticker(remote_jid, STICKER_COPA)
 
     intencao = detectar_intencao(text)
     _reset_casual_chat(remote_jid)  # Msg com intenção real reseta o contador de bate-papo
