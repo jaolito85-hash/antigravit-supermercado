@@ -2606,6 +2606,24 @@ NEGATIVE_SIGNAL_PATTERNS = (
     'erro', 'reclam', 'bagunca', 'bagunça'
 )
 
+# --- Saudações e bate-papo casual ---
+# Palavras que indicam cumprimento explícito
+GREETING_WORDS = {
+    'oi', 'ola', 'olá', 'eai', 'eae', 'opa', 'fala', 'salve',
+    'hey', 'hello', 'hi',
+}
+
+# Padrões ambíguos — podem ser saudação ou despedida dependendo do contexto
+# Se há conversa ativa → despedida; se não → saudação
+CONTEXT_DEPENDENT_PATTERNS = {
+    'bom dia', 'boa tarde', 'boa noite', 'tudo bem', 'tudo bom', 'tudo certo',
+}
+
+# Controle de bate-papo casual por remetente
+_casual_chat_tracker = {}
+CASUAL_CHAT_TTL = 600   # 10 min sem interação reseta o contador
+CASUAL_CHAT_LIMIT = 4   # Após N msgs casuais, redireciona para o mercado
+
 CATEGORY_EMOJI_MAP = {
     'hortifruti': '🥬',
     'padaria': '🍞',
@@ -2658,6 +2676,52 @@ def is_conversation_wrap_up(text):
         normalized == pattern or normalized.startswith(pattern) or normalized.endswith(pattern)
         for pattern in WRAP_UP_PATTERNS
     )
+
+
+def is_greeting(text):
+    """Detecta se a mensagem é uma saudação/cumprimento."""
+    normalized = normalize_text(text or '').strip().rstrip('!.?')
+    if not normalized:
+        return False
+    tokens = normalized.split()
+    if len(tokens) > 10:
+        return False
+    # Limpa pontuação dos tokens para matching (ex: "oi," → "oi")
+    clean_tokens = [t.strip(',.!?;:') for t in tokens]
+    # Contém palavra de saudação explícita (oi, olá, fala, etc.)
+    if any(token in GREETING_WORDS for token in clean_tokens):
+        return True
+    # Frase ambígua sozinha (bom dia, tudo bem, etc.)
+    if normalized in CONTEXT_DEPENDENT_PATTERNS:
+        return True
+    # Começa com padrão ambíguo + algo mais (ex: "bom dia pessoal")
+    if any(normalized.startswith(p) for p in CONTEXT_DEPENDENT_PATTERNS):
+        return True
+    return False
+
+
+def _get_casual_chat_count(remote_jid):
+    """Retorna contador de bate-papo casual do remetente."""
+    entry = _casual_chat_tracker.get(remote_jid)
+    if not entry:
+        return 0
+    if (time_now() - entry["timestamp"]) > CASUAL_CHAT_TTL:
+        _casual_chat_tracker.pop(remote_jid, None)
+        return 0
+    return entry["count"]
+
+
+def _increment_casual_chat(remote_jid):
+    """Incrementa e retorna o novo contador de bate-papo casual."""
+    count = _get_casual_chat_count(remote_jid) + 1
+    _casual_chat_tracker[remote_jid] = {"count": count, "timestamp": time_now()}
+    return count
+
+
+def _reset_casual_chat(remote_jid):
+    """Reseta contador quando o cliente fala de algo do mercado."""
+    _casual_chat_tracker.pop(remote_jid, None)
+
 
 def is_agent_identity_question(text):
     normalized = normalize_text(text).rstrip('!.?')
@@ -3002,6 +3066,55 @@ Gere uma resposta curta de {AGENT_NAME}.
         else:
             reply = "Obrigado por me contar. Ja deixei seu registro salvo para acompanhamento."
         return finalize_marcia_reply(reply, urgency, category, text)
+
+
+def generate_greeting_response(text, push_name=None, casual_count=0):
+    """Gera resposta natural para saudações via IA."""
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    redirect = ""
+    if casual_count >= CASUAL_CHAT_LIMIT:
+        redirect = (
+            "\n\nATENÇÃO: o cliente já mandou várias mensagens de bate-papo sem falar do mercado. "
+            "Cumprimente brevemente e pergunte se pode ajudar com algo do Atacaforte — "
+            "promoções, opinião sobre o mercado, dúvidas. Seja natural."
+        )
+
+    greeting_prompt = f"""O cliente mandou uma saudação no WhatsApp.
+- Nome do cliente: {push_name or 'não informado'}
+- Mensagem: "{text}"
+- Responda como {AGENT_NAME} de forma natural, curta e acolhedora (1-2 frases)
+- Cumprimente de volta e se apresente brevemente
+- Não diga que é IA, sistema ou robô{redirect}"""
+
+    name_part = f" {push_name}!" if push_name else "!"
+
+    if not api_key:
+        if casual_count >= CASUAL_CHAT_LIMIT:
+            return f"Opa, tudo certo{name_part} Posso te ajudar com algo do {MARKET_NAME}? Promoções, feedback, dúvidas... é só falar! 🛒"
+        return f"E aí{name_part} Aqui é o {AGENT_NAME}, do {MARKET_NAME}. Pode falar!"
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "user", "content": greeting_prompt}
+            ],
+            max_tokens=80,
+            temperature=0.7
+        )
+        reply = response.choices[0].message.content.strip()
+        if reply.startswith('"') and reply.endswith('"'):
+            reply = reply[1:-1]
+        return reply
+    except Exception as e:
+        print(f"[GREETING] AI error: {e}")
+        if casual_count >= CASUAL_CHAT_LIMIT:
+            return f"Opa, tudo certo{name_part} Posso te ajudar com algo do {MARKET_NAME}? Promoções, feedback, dúvidas... é só falar! 🛒"
+        return f"E aí{name_part} Aqui é o {AGENT_NAME}, do {MARKET_NAME}. Pode falar!"
 
 
 def is_negative_reply(text):
@@ -4943,8 +5056,43 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
 
     conversation_context.pop(remote_jid, None)
 
-    # Detecta encerramento antes de classificar intenção — evita resposta fora de contexto
-    # para frases como 'só isso mesmo', 'era isso', 'tchau', 'tudo bem'
+    # --- SAUDAÇÃO ---
+    # Se a mensagem é uma saudação, responde via IA ao invés de tratar como encerramento.
+    # Padrões ambíguos (bom dia, tudo bem) só viram despedida se há conversa ativa.
+    if is_greeting(text):
+        active_fb = get_active_feedback(remote_jid)
+        normalized_greeting = normalize_text(text or '').strip().rstrip('!.?')
+        has_explicit_greeting = any(t.strip(',.!?;:') in GREETING_WORDS for t in normalized_greeting.split())
+        is_ambiguous_only = (
+            normalized_greeting in CONTEXT_DEPENDENT_PATTERNS
+            and not has_explicit_greeting
+        )
+        if active_fb and is_ambiguous_only:
+            # Há conversa ativa e a msg é só "bom dia" / "tudo bem" → despedida
+            import random
+            despedidas = [
+                'Fico feliz em ajudar. Até mais! 😊',
+                'Pode contar comigo sempre. Até mais!',
+                'Obrigado por falar com a gente. Até logo!',
+                'Ótimo! Qualquer coisa é só chamar.',
+            ]
+            reply = random.choice(despedidas)
+            send_whatsapp_message(remote_jid, reply)
+            updated_msg = append_conversation_entry(active_fb.get('message', ''), 'client', text)
+            updated_msg = append_conversation_entry(updated_msg, 'agent', reply)
+            update_feedback(active_fb['id'], {
+                'message': updated_msg,
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            return jsonify({'status': 'conversation_closed'}), 200
+        else:
+            # Saudação genuína → resposta via IA
+            casual_count = _increment_casual_chat(remote_jid)
+            reply = generate_greeting_response(text, push_name, casual_count)
+            send_whatsapp_message(remote_jid, reply)
+            print(f"[GREETING] casual_count={casual_count} for {mascarar_telefone(remote_jid)}")
+            return jsonify({"status": "greeting_handled"}), 200
+
     if is_conversation_wrap_up(text):
         import random
         despedidas = [
@@ -4967,6 +5115,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         return jsonify({'status': 'conversation_closed'}), 200
 
     intencao = detectar_intencao(text)
+    _reset_casual_chat(remote_jid)  # Msg com intenção real reseta o contador de bate-papo
     print(f"ðŸ” [INTENT] {intencao}: {text[:50]}")
 
     if intencao == 'horario':
