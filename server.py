@@ -898,6 +898,8 @@ def _enviar_promo_mes(remote_jid):
 
 def _enviar_menu_promocoes(remote_jid):
     """Envia menu fixo de promoções para o cliente escolher o período."""
+    if os.path.exists(STICKER_PROMOCAO):
+        send_whatsapp_sticker(remote_jid, STICKER_PROMOCAO)
     menu = (
         "🛒 *Temos promoções pra você!*\n\n"
         "Qual tipo de promoção quer ver?\n\n"
@@ -3801,6 +3803,7 @@ def send_whatsapp_sticker(remote_jid: str, sticker_path: str) -> bool:
 # Caminho dos stickers do Pipico
 STICKER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "stickers")
 STICKER_SAUDACAO = os.path.join(STICKER_DIR, "pipico-saudacao.webp")
+STICKER_PROMOCAO = os.path.join(STICKER_DIR, "pipico-promocao.webp")
 
 
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
