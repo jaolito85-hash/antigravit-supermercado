@@ -4968,9 +4968,12 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     # antes de qualquer processamento — o feedback de verdade virá na próxima mensagem.
     if "vim pelo qr code" in text.lower():
         boas_vindas = (
-            "Olá! Aqui é o Seu Pipico, do Atacaforte! Que bom ter você aqui! "
-            "Pode falar à vontade — sua opinião é o que faz a gente melhorar. "
-            "O que você achou da sua visita? 🛒"
+            "Olá! Aqui é o Seu Pipico, do Atacaforte! Que bom ter você aqui! 🛒\n\n"
+            "Por aqui você pode:\n"
+            "🔹 Ver as *promoções do dia e do mês*\n"
+            "🔹 Dar sua *opinião* sobre o mercado\n"
+            "🔹 Tirar *dúvidas* sobre o Atacaforte\n\n"
+            "O que você precisa hoje?"
         )
         send_whatsapp_message(remote_jid, boas_vindas)
         if os.path.exists(STICKER_SAUDACAO):
