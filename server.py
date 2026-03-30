@@ -2594,13 +2594,12 @@ WRAP_UP_PATTERNS = {
     'ate mais', 'até mais', 'ate logo', 'até logo', 'ate', 'até',
     'ate breve', 'até breve', 'fui', 'fui la', 'fui lá', 'abcos', 'abs',
     'falou', 'vlw', 'abraco', 'abraço', 'abcs',
-    'boa noite', 'boa tarde', 'bom dia',
     # encerramento com agradecimento
     'ok obrigado', 'ok obrigada', 'ok valeu', 'tudo bem obrigado', 'tudo bem obrigada',
     'tudo bem valeu', 'ta bom obrigado', 'ta bom obrigada', 'tá bom obrigado',
     'pode fechar', 'pode encerrar', 'encerrado', 'sem mais',
     # confirmações de encerramento
-    'tudo bem', 'tudo certo', 'ta bom', 'tá bom', 'ok', 'entendi', 'certo',
+    'tudo certo', 'ta bom', 'tá bom', 'ok', 'entendi', 'certo',
     'combinado', 'perfeito obrigado', 'perfeito valeu',
 }
 
@@ -4981,8 +4980,10 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
 
     ctx = get_context(remote_jid)
 
-    # Permite respostas curtas (ex.: "1"/"2") quando hÃ¡ contexto pendente.
-    if len(text.strip()) < MIN_MESSAGE_LENGTH and not ctx:
+    # Permite respostas curtas (ex.: "1"/"2") quando há contexto pendente.
+    # Saudações curtas ("oi", "hi") também passam mesmo sem contexto.
+    is_short_greeting = normalize_text(text.strip()).rstrip('!.?,') in GREETING_WORDS
+    if len(text.strip()) < MIN_MESSAGE_LENGTH and not ctx and not is_short_greeting:
         return jsonify({"status": "ignored_too_short"}), 200
     if is_emoji_only(text) and not ctx:
         return jsonify({"status": "ignored_emoji_only"}), 200
@@ -5140,43 +5141,14 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     conversation_context.pop(remote_jid, None)
 
     # --- SAUDAÇÃO ---
-    # Se a mensagem é uma saudação, responde via IA ao invés de tratar como encerramento.
-    # Padrões ambíguos (bom dia, tudo bem) só viram despedida se há conversa ativa.
+    # Saudações SEMPRE vão para a IA responder naturalmente.
+    # Despedida só acontece com palavras explícitas (tchau, falou, vlw) no wrap-up abaixo.
     if is_greeting(text):
-        active_fb = get_active_feedback(remote_jid)
-        normalized_greeting = normalize_text(text or '').strip().rstrip('!.?')
-        has_explicit_greeting = any(t.strip(',.!?;:') in GREETING_WORDS for t in normalized_greeting.split())
-        is_ambiguous_only = (
-            normalized_greeting in CONTEXT_DEPENDENT_PATTERNS
-            and not has_explicit_greeting
-        )
-        if active_fb and is_ambiguous_only:
-            # Há conversa ativa e a msg é só "bom dia" / "tudo bem" → despedida
-            import random
-            if os.path.exists(STICKER_TCHAU):
-                send_whatsapp_sticker(remote_jid, STICKER_TCHAU)
-            despedidas = [
-                'Fico feliz em ajudar. Até mais! 😊',
-                'Pode contar comigo sempre. Até mais!',
-                'Obrigado por falar com a gente. Até logo!',
-                'Ótimo! Qualquer coisa é só chamar.',
-            ]
-            reply = random.choice(despedidas)
-            send_whatsapp_message(remote_jid, reply)
-            updated_msg = append_conversation_entry(active_fb.get('message', ''), 'client', text)
-            updated_msg = append_conversation_entry(updated_msg, 'agent', reply)
-            update_feedback(active_fb['id'], {
-                'message': updated_msg,
-                'updated_at': datetime.utcnow().isoformat()
-            })
-            return jsonify({'status': 'conversation_closed'}), 200
-        else:
-            # Saudação genuína → resposta via IA
-            casual_count = _increment_casual_chat(remote_jid)
-            reply = generate_greeting_response(text, push_name, casual_count)
-            send_whatsapp_message(remote_jid, reply)
-            print(f"[GREETING] casual_count={casual_count} for {mascarar_telefone(remote_jid)}")
-            return jsonify({"status": "greeting_handled"}), 200
+        casual_count = _increment_casual_chat(remote_jid)
+        reply = generate_greeting_response(text, push_name, casual_count)
+        send_whatsapp_message(remote_jid, reply)
+        print(f"[GREETING] casual_count={casual_count} for {mascarar_telefone(remote_jid)}")
+        return jsonify({"status": "greeting_handled"}), 200
 
     if is_conversation_wrap_up(text):
         import random
