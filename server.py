@@ -3804,6 +3804,7 @@ def send_whatsapp_sticker(remote_jid: str, sticker_path: str) -> bool:
 STICKER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "stickers")
 STICKER_SAUDACAO = os.path.join(STICKER_DIR, "pipico-saudacao.webp")
 STICKER_PROMOCAO = os.path.join(STICKER_DIR, "pipico-promocao.webp")
+STICKER_FECHADO = os.path.join(STICKER_DIR, "pipico-fechado.webp")
 
 
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
@@ -5153,6 +5154,8 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     print(f"ðŸ” [INTENT] {intencao}: {text[:50]}")
 
     if intencao == 'horario':
+        if not is_store_open() and os.path.exists(STICKER_FECHADO):
+            send_whatsapp_sticker(remote_jid, STICKER_FECHADO)
         reply = generate_horario_response(text)
         send_whatsapp_message(remote_jid, reply)
         return jsonify({'status': 'horario_sent'}), 200
