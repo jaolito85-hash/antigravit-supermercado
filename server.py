@@ -3808,6 +3808,7 @@ STICKER_SAUDACAO = os.path.join(STICKER_DIR, "pipico-saudacao.webp")
 STICKER_PROMOCAO = os.path.join(STICKER_DIR, "pipico-promocao.webp")
 STICKER_FECHADO = os.path.join(STICKER_DIR, "pipico-fechado.webp")
 STICKER_TCHAU = os.path.join(STICKER_DIR, "pipico-tchau.webp")
+STICKER_FEEDBACK = os.path.join(STICKER_DIR, "pipico-feedback.webp")
 
 
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
@@ -5235,6 +5236,9 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         send_whatsapp_message(remote_jid, result["reply"])
         if result["status"] == "feedback_processed":
             record_agent_reply(result["result"].get("id"), result["result"].get("message"), result["reply"])
+            # Envia figurinha de agradecimento se não há follow-up pendente
+            if not get_context(remote_jid) and os.path.exists(STICKER_FEEDBACK):
+                send_whatsapp_sticker(remote_jid, STICKER_FEEDBACK)
         else:
             update_context_message(remote_jid, 'agent', result["reply"])
         return jsonify({"status": result["status"]}), 200
