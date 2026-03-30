@@ -3371,6 +3371,13 @@ def process_context_followup(remote_jid, push_name, text):
                 _enviar_promo_mes(remote_jid)
                 return {"reply": None, "status": "monthly_promo_sent"}
 
+        # Se o cliente mandou agradecimento, saudação ou despedida,
+        # sai do contexto de promoção e deixa o fluxo normal tratar
+        if (is_customer_thank_you_message(text) or is_greeting(text)
+                or is_conversation_wrap_up(text)):
+            clear_context(remote_jid)
+            return None
+
         # Resposta ambígua — repete a pergunta
         return {
             "reply": (
