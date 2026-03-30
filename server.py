@@ -3774,6 +3774,35 @@ def send_whatsapp_message(remote_jid, message):
     except Exception as e:
         print(f"❌ Error sending message: {e}")
 
+def send_whatsapp_sticker(remote_jid: str, sticker_path: str) -> bool:
+    """Envia uma figurinha (sticker) pelo WhatsApp via Evolution API."""
+    if not EVOLUTION_API_URL or not EVOLUTION_API_KEY or not EVOLUTION_INSTANCE_NAME:
+        print("❌ Evolution API não configurada para envio de sticker.")
+        return False
+    try:
+        import base64
+        with open(sticker_path, "rb") as f:
+            sticker_b64 = base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        print(f"❌ Erro ao ler sticker {sticker_path}: {e}")
+        return False
+    url = f"{EVOLUTION_API_URL}/message/sendSticker/{EVOLUTION_INSTANCE_NAME}"
+    headers = {"apikey": EVOLUTION_API_KEY, "Content-Type": "application/json"}
+    payload = {"number": remote_jid, "sticker": sticker_b64}
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        print(f"🎭 Sticker enviado para {remote_jid}: {response.status_code}")
+        return response.status_code in (200, 201)
+    except Exception as e:
+        print(f"❌ Erro ao enviar sticker para {remote_jid}: {e}")
+        return False
+
+
+# Caminho dos stickers do Pipico
+STICKER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "stickers")
+STICKER_SAUDACAO = os.path.join(STICKER_DIR, "pipico-saudacao.webp")
+
+
 def send_whatsapp_image(remote_jid: str, image_url: str, caption: str = "") -> None:
     """Envia uma imagem (banner de promoção) pelo WhatsApp via Evolution API."""
     if not EVOLUTION_API_URL or not EVOLUTION_API_KEY or not EVOLUTION_INSTANCE_NAME:
@@ -4893,6 +4922,8 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
             "O que você achou da sua visita? 🛒"
         )
         send_whatsapp_message(remote_jid, boas_vindas)
+        if os.path.exists(STICKER_SAUDACAO):
+            send_whatsapp_sticker(remote_jid, STICKER_SAUDACAO)
         print(f"[QR-WELCOME] Boas-vindas enviadas para {remote_jid}")
         return jsonify({"status": "qr_welcome_sent"}), 200
 
