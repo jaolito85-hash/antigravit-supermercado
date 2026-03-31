@@ -2480,8 +2480,41 @@ Responda de forma natural, breve e útil.
         return f"*Promoções da semana no {MARKET_NAME}:*\n{selected_text}"
     return f"*Promoções no {MARKET_NAME}:*\n{selected_text}"
 
-def generate_unavailable_product_response():
-    return "Isso eu não consigo confirmar por aqui no momento, porque não tenho acesso ao estoque nem à previsão de chegada."
+def generate_unavailable_product_response(text=""):
+    """Responde sobre produto indisponível com empatia via IA."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    fallback = (
+        "Entendo, e é bom saber disso. Não tenho acesso ao estoque por aqui, "
+        "mas já deixei registrado para a equipe do mercado ficar sabendo."
+    )
+    if not api_key or not text:
+        return fallback
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "user", "content": f"""O cliente mandou uma mensagem sobre um produto:
+"{text}"
+
+Responda como {AGENT_NAME} com empatia e honestidade:
+- Reconheça o que o cliente disse (falta do produto, saudade, etc.)
+- Diga que não tem acesso ao estoque nem previsão de chegada
+- Diga que vai deixar registrado para a equipe do mercado ficar sabendo
+- Máximo 2 frases, tom acolhedor"""}
+            ],
+            max_tokens=100,
+            temperature=0.65
+        )
+        reply = response.choices[0].message.content.strip()
+        if reply.startswith('"') and reply.endswith('"'):
+            reply = reply[1:-1]
+        return reply
+    except Exception as e:
+        print(f"[UNAVAILABLE] AI error: {e}")
+        return fallback
 
 def generate_pergunta_geral_response(text):
     """Responde perguntas gerais sem inventar informações internas."""
@@ -3818,9 +3851,9 @@ STICKER_TCHAU = os.path.join(STICKER_DIR, "pipico-tchau.webp")
 STICKER_FEEDBACK = os.path.join(STICKER_DIR, "pipico-feedback.webp")
 STICKER_COPA = os.path.join(STICKER_DIR, "pipico-copa.webp")
 
-COPA_KEYWORDS = (
-    'copa', 'copa do mundo', 'selecao', 'seleção', 'brasil',
-    'neymar', 'ney', 'vini jr', 'vini', 'gol', 'futebol',
+# Regex com word boundary — evita falsos positivos como "pergola" → "gol"
+COPA_KEYWORDS_RE = re.compile(
+    r'\b(?:copa do mundo|copa|selecao|brasil|neymar|ney|vini jr|vini|gol|futebol)\b'
 )
 
 
@@ -5193,7 +5226,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
     # Envia figurinha do Pipico torcedor se a mensagem mencionar futebol/copa
     if os.path.exists(STICKER_COPA):
         texto_copa = normalize_text(text)
-        if any(k in texto_copa for k in COPA_KEYWORDS):
+        if COPA_KEYWORDS_RE.search(texto_copa):
             send_whatsapp_sticker(remote_jid, STICKER_COPA)
 
     intencao = detectar_intencao(text)
@@ -5213,7 +5246,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
         return jsonify({"status": "estrutura_local_sent"}), 200
 
     elif intencao == 'consulta_indisponivel':
-        reply = generate_unavailable_product_response()
+        reply = generate_unavailable_product_response(text)
         send_whatsapp_message(remote_jid, reply)
         return jsonify({"status": "product_unavailable_scope"}), 200
 
