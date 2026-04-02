@@ -923,39 +923,6 @@ def build_promotions_prompt_block():
     ]
     return "\n".join(lines)
 
-def build_dona_marcia_system_prompt():
-    return f'''Você é {AGENT_NAME}, atendente virtual do supermercado {MARKET_NAME} no WhatsApp.
-
-SEU PAPEL
-- Receber elogios, reclamações, sugestões e dúvidas gerais dos clientes
-- Acolher o cliente de forma humana, prática e rápida
-- Informar as promoções do dia e da semana apenas com base no bloco fixo abaixo
-- Reconhecer comparações com concorrentes com respeito
-- Registrar o feedback para acompanhamento
-
-PERSONALIDADE
-- Tom acolhedor, esperto, direto e confiável
-- Usa "você"
-- Nunca usa linguagem robótica, fria ou corporativa
-- No máximo 1 emoji por resposta
-
-REGRAS ABSOLUTAS
-- Responda sempre em português do Brasil
-- Respostas curtas: no máximo 2 frases
-- Nunca diga que é IA, sistema ou robô
-- Nunca invente preços, estoque, prazo de chegada, ação interna já executada, políticas, dados de CRM ou informação não fornecida
-- Você NÃO tem acesso a estoque, previsão de reposição, CRM ou sistemas internos do mercado
-- Se perguntarem sobre estoque, disponibilidade ou chegada de produto, diga com honestidade que não consegue confirmar por aqui
-- Se houver reclamação, reconheça o problema e diga que o relato foi registrado para acompanhamento
-- Se houver elogio, agradeça de forma curta e calorosa
-- Se houver sugestão, agradeça e diga que ela foi registrada
-- Se houver menção a concorrente, responda com respeito e valorize a comparação
-- Se a informação não existir no contexto, diga isso claramente e ofereça o próximo passo mais simples
-- Nunca diga "já resolvi", "já corrigi", "já chamei" ou equivalente sem confirmação explícita no contexto
-
-{build_promotions_prompt_block()}
-'''
-
 def get_feedbacks():
     sb = get_supabase()
     if sb:
@@ -1838,7 +1805,7 @@ Responda APENAS com a intenção, sem explicação.'''
 
     return 'feedback'
 
-# --- AI RESPONSE: DONA MÁRCIA ---
+# --- AI RESPONSE: SEU PIPICO ---
 
 def generate_pergunta_geral_response(text):
     """Responde perguntas gerais sobre o mercado como Seu Pipico"""
@@ -1921,7 +1888,7 @@ Gere UMA resposta criativa e única como {AGENT_NAME}:'''
             reply = reply[1:-1]
         return reply
     except Exception as e:
-        print(f"❌ [MÁRCIA] Error: {e}")
+        print(f"❌ [PIPICO] Error: {e}")
         if urgency == "Positivo":
             return "Que bom saber! Obrigada pelo carinho, volte sempre 🛒"
         elif urgency in ["Critico", "Urgente"]:
@@ -2097,7 +2064,7 @@ Máximo 500 caracteres total. NÃO inclua preços na receita.'''
         print(f"❌ Receita error: {e}")
         return "Hoje minha sugestão é um macarrão com molho de tomate fresquinho! Passa no mercado que tem tudo 🍝\n\n💡 _Quer a lista dos ingredientes com os valores? É só pedir!_ 🛒"
 
-# --- DONA MARCIA OVERRIDES ---
+# --- SEU PIPICO OVERRIDES ---
 
 def is_food_safety_issue(text):
     texto_norm = normalize_text(text or "")
@@ -2445,7 +2412,7 @@ def generate_promocoes_response(text=""):
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": build_dona_marcia_system_prompt()},
+                    {"role": "system", "content": build_pipico_system_prompt()},
                     {
                         "role": "user",
                         "content": f'''O cliente perguntou sobre promoções.
@@ -2470,7 +2437,7 @@ Responda de forma natural, breve e útil.
             reply = response.choices[0].message.content.strip()
             if reply.startswith('"') and reply.endswith('"'):
                 reply = reply[1:-1]
-            return finalize_marcia_reply(reply, "Neutro", "Promoção", text)
+            return finalize_pipico_reply(reply, "Neutro", "Promoção", text)
         except Exception as e:
             print(f"Promotions response error: {e}")
 
@@ -2495,7 +2462,7 @@ def generate_unavailable_product_response(text=""):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": f"""O cliente mandou uma mensagem sobre um produto:
 "{text}"
 
@@ -2529,7 +2496,7 @@ def generate_pergunta_geral_response(text):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {
                     "role": "user",
                     "content": f'''O cliente fez uma dúvida geral.
@@ -2580,7 +2547,7 @@ Gere uma resposta curta de {AGENT_NAME}.
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
             max_tokens=120,
@@ -2591,14 +2558,14 @@ Gere uma resposta curta de {AGENT_NAME}.
             reply = reply[1:-1]
         return reply
     except Exception as e:
-        print(f"[MARCIA] Error: {e}")
+        print(f"[PIPICO] Error: {e}")
         if urgency == "Positivo":
             return "Que bom receber isso. Obrigado por contar pra gente ✅"
         if urgency in ["Critico", "Urgente"]:
             return "Poxa, sinto muito por isso. Já deixei seu relato registrado para acompanhamento."
         return "Obrigado por me contar. Já deixei seu registro salvo para acompanhamento."
 
-MARCIA_EMOJI_RE = re.compile(
+PIPICO_EMOJI_RE = re.compile(
     "["
     "\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF"
     "\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251"
@@ -2670,8 +2637,8 @@ CATEGORY_EMOJI_MAP = {
     'promoção': '🛒',
 }
 
-def strip_marcia_emojis(text):
-    return MARCIA_EMOJI_RE.sub('', text or '').strip()
+def strip_pipico_emojis(text):
+    return PIPICO_EMOJI_RE.sub('', text or '').strip()
 
 def normalize_reply_spacing(text):
     text = re.sub(r'\s+', ' ', (text or '').strip())
@@ -2780,7 +2747,7 @@ def is_negative_feedback_message(text, urgency):
     normalized = normalize_text(text)
     return any(pattern in normalized for pattern in NEGATIVE_SIGNAL_PATTERNS)
 
-def choose_marcia_emoji(clean_reply, urgency, category, source_text):
+def choose_pipico_emoji(clean_reply, urgency, category, source_text):
     if is_customer_thank_you_message(source_text):
         return ''
     if is_negative_feedback_message(source_text, urgency):
@@ -2797,22 +2764,22 @@ def choose_marcia_emoji(clean_reply, urgency, category, source_text):
         return '💚'
     return ''
 
-def finalize_marcia_reply(reply, urgency, category, source_text):
+def finalize_pipico_reply(reply, urgency, category, source_text):
     if is_customer_thank_you_message(source_text):
         return "Eu que agradeço. Se quiser, pode me contar mais detalhes."
 
-    clean_reply = normalize_reply_spacing(strip_marcia_emojis(reply))
+    clean_reply = normalize_reply_spacing(strip_pipico_emojis(reply))
     if not clean_reply:
         clean_reply = "Obrigado por me contar. Já deixei seu registro salvo para acompanhamento."
 
-    emoji = choose_marcia_emoji(clean_reply, urgency, category, source_text)
+    emoji = choose_pipico_emoji(clean_reply, urgency, category, source_text)
     if emoji and not clean_reply.endswith(('.', '!', '?')):
         clean_reply += '.'
     if emoji:
         clean_reply = f"{clean_reply} {emoji}"
     return clean_reply
 
-def build_dona_marcia_system_prompt():
+def build_pipico_system_prompt():
     return f'''Você é {AGENT_NAME}, atendente virtual do supermercado {MARKET_NAME} no WhatsApp.
 
 SEU PAPEL
@@ -2909,7 +2876,7 @@ def generate_pergunta_geral_response(text):
     api_key = os.getenv("OPENAI_API_KEY")
     fallback = "Isso eu não consigo confirmar por aqui no momento."
     if not api_key:
-        return finalize_marcia_reply(fallback, "Neutro", "Geral", text)
+        return finalize_pipico_reply(fallback, "Neutro", "Geral", text)
 
     try:
         from openai import OpenAI
@@ -2917,7 +2884,7 @@ def generate_pergunta_geral_response(text):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {
                     "role": "user",
                     "content": f'''O cliente fez uma dúvida geral.
@@ -2933,10 +2900,10 @@ Responda de forma breve. Se a informação não estiver disponível no contexto,
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
             reply = reply[1:-1]
-        return finalize_marcia_reply(reply, "Neutro", "Geral", text)
+        return finalize_pipico_reply(reply, "Neutro", "Geral", text)
     except Exception as e:
         print(f"Pergunta geral error: {e}")
-        return finalize_marcia_reply(fallback, "Neutro", "Geral", text)
+        return finalize_pipico_reply(fallback, "Neutro", "Geral", text)
 
 def generate_ai_response(text, category, urgency, conversation_entries=None):
     """Gera resposta acolhedora e factual como Seu Pipico, com emoji contextual."""
@@ -2963,7 +2930,7 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
             reply = "Sinto muito por isso. Já deixei seu relato registrado para acompanhamento."
         else:
             reply = "Obrigado por me contar. Já deixei seu registro salvo para acompanhamento."
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
 
     try:
         from openai import OpenAI
@@ -2986,7 +2953,7 @@ Gere uma resposta curta de {AGENT_NAME}.
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
             max_tokens=120,
@@ -2995,16 +2962,16 @@ Gere uma resposta curta de {AGENT_NAME}.
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
             reply = reply[1:-1]
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
     except Exception as e:
-        print(f"[MARCIA] Error: {e}")
+        print(f"[PIPICO] Error: {e}")
         if urgency == "Positivo":
             reply = "Que bom receber isso. Obrigado por contar pra gente."
         elif urgency in ["Critico", "Urgente"]:
             reply = "Sinto muito por isso. Já deixei seu relato registrado para acompanhamento."
         else:
             reply = "Obrigado por me contar. Já deixei seu registro salvo para acompanhamento."
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
 
 def generate_ai_response(text, category, urgency, conversation_entries=None, remote_jid=None):
     """Versao final contextual do Seu Pipico, evitando repeticao em follow-up."""
@@ -3036,7 +3003,7 @@ def generate_ai_response(text, category, urgency, conversation_entries=None, rem
             reply = "Sinto muito por isso. Ja deixei seu relato registrado para acompanhamento."
         else:
             reply = "Obrigado por me contar. Ja deixei seu registro salvo para acompanhamento."
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
 
     # Bloco de instrução adicional para escalada emocional
     instrucao_escalada = ""
@@ -3080,7 +3047,7 @@ Gere uma resposta curta de {AGENT_NAME}.
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
             max_tokens=120,
@@ -3091,9 +3058,9 @@ Gere uma resposta curta de {AGENT_NAME}.
             reply = reply[1:-1]
         if is_repetitive_followup_reply(reply, conversation_entries):
             reply = build_followup_feedback_reply(text, category, urgency)
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
     except Exception as e:
-        print(f"[MARCIA] Error: {e}")
+        print(f"[PIPICO] Error: {e}")
         if has_followup_context:
             reply = build_followup_feedback_reply(text, category, urgency)
         elif urgency == "Positivo":
@@ -3102,7 +3069,7 @@ Gere uma resposta curta de {AGENT_NAME}.
             reply = "Sinto muito por isso. Ja deixei seu relato registrado para acompanhamento."
         else:
             reply = "Obrigado por me contar. Ja deixei seu registro salvo para acompanhamento."
-        return finalize_marcia_reply(reply, urgency, category, text)
+        return finalize_pipico_reply(reply, urgency, category, text)
 
 
 def generate_greeting_response(text, push_name=None, casual_count=0):
@@ -3137,7 +3104,7 @@ def generate_greeting_response(text, push_name=None, casual_count=0):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": build_dona_marcia_system_prompt()},
+                {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": greeting_prompt}
             ],
             max_tokens=80,
@@ -5375,7 +5342,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                 except:
                     reply = "Anotado. Já adicionei essa informação ao seu atendimento."
 
-                reply = finalize_marcia_reply(reply, update_urgency or sentimento, categoria, text)
+                reply = finalize_pipico_reply(reply, update_urgency or sentimento, categoria, text)
                 send_whatsapp_message(remote_jid, reply)
                 record_agent_reply(active_feedback['id'], updated_message or active_feedback['message'], reply)
                 return jsonify({"status": "updated_existing", "id": active_feedback['id']}), 200
@@ -5411,7 +5378,7 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
             record_agent_reply(current_id, new_feedback["message"], reply)
         except Exception as e:
             print(f"âŒ [WEBHOOK] AI reply failed: {e}")
-            fallback_reply = finalize_marcia_reply(
+            fallback_reply = finalize_pipico_reply(
                 "Recebemos sua mensagem. Obrigado por contar pra gente.",
                 sentimento,
                 categoria,
@@ -5736,7 +5703,7 @@ def webhook():
                             except:
                                 reply = "Anotado. Já adicionei essa informação ao seu atendimento."
 
-                            reply = finalize_marcia_reply(reply, update_urgency or sentimento, categoria, text)
+                            reply = finalize_pipico_reply(reply, update_urgency or sentimento, categoria, text)
                             send_whatsapp_message(remote_jid, reply)
                             record_agent_reply(active_feedback['id'], updated_message or active_feedback['message'], reply)
                             return jsonify({"status": "updated_existing", "id": active_feedback['id']}), 200
@@ -5774,7 +5741,7 @@ def webhook():
                         record_agent_reply(current_id, new_feedback["message"], reply)
                     except Exception as e:
                         print(f"❌ [WEBHOOK] AI reply failed: {e}")
-                        fallback_reply = finalize_marcia_reply(
+                        fallback_reply = finalize_pipico_reply(
                             "Recebemos sua mensagem. Obrigado por contar pra gente.",
                             sentimento,
                             categoria,
