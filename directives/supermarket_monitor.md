@@ -13,7 +13,7 @@ Receive WhatsApp messages from Atacaforte customers, welcome feedback, classify 
 
 ## Triggers
 
-- Incoming Webhook from Evolution API (type: `messages.upsert`)
+- Incoming Webhook from WhatsApp Cloud API (Meta) — assina o campo `messages`; payload em `entry[0].changes[0].value`
 
 ## Intent Detection
 
@@ -24,7 +24,7 @@ Receive WhatsApp messages from Atacaforte customers, welcome feedback, classify 
 
 ## Steps
 
-1. **Validation**: Ensure message is not from the bot itself (`key.fromMe` should be false)
+1. **Validation**: A Cloud API entrega no webhook `messages` apenas mensagens recebidas do cliente (não ecoa mensagens do próprio bot). Eventos de status (payload sem `messages`) são ignorados retornando 200.
 2. **Spam Protection**: Min length, emoji-only filter, rate limiting
 3. **Intent Detection**: Keywords + AI fallback to determine user intent
 4. **Action by Intent**:
@@ -39,6 +39,6 @@ Atendimento, Fila, Hortifrúti, Padaria, Açougue, Limpeza, Preço, Estacionamen
 
 ## Edge Cases
 
-- **Audio messages**: Transcribe via Whisper, then process as text
+- **Audio messages**: (TODO) Na Cloud API o download de mídia é em 2 passos (media_id → URL temporária → bytes). Por ora, áudios são ignorados graciosamente; quando implementado, transcrever via Whisper e processar como texto.
 - **Stock / arrival questions**: Reply honestly that Seu Pipico has no stock, CRM, or replenishment access
 - **Competitor mentions**: Treat as valid feedback and preserve for intelligence analytics

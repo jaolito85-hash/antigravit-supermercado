@@ -4,7 +4,7 @@
 
 Node Data Supermercado é uma plataforma SaaS que coleta feedback de clientes via WhatsApp, com análise de sentimento por IA, dashboard em tempo real e inteligência de promoções competitivas para redes de supermercados.
 
-Stack: Flask (Python), Supabase, Evolution API, OpenAI, Coolify/Docker.
+Stack: Flask (Python), Supabase, WhatsApp Cloud API (Meta), OpenAI, Coolify/Docker.
 
 **Porta:** 5003
 
@@ -53,7 +53,7 @@ Sempre siga as regras de qualidade e segurança descritas em `PRODUCTION_CHECKLI
 - Dados de clientes são protegidos por LGPD — nunca exponha em logs
 
 ### Código
-- Sempre use try/except em chamadas externas (Supabase, Evolution API, OpenAI)
+- Sempre use try/except em chamadas externas (Supabase, WhatsApp Cloud API, OpenAI)
 - Sempre configure timeout nas requisições HTTP (mínimo 10s)
 - Sempre valide inputs antes de processar
 - Sempre adicione logs nos pontos críticos

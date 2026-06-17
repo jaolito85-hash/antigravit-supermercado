@@ -11,9 +11,9 @@ O Node Data é uma plataforma SaaS que coleta feedback de cidadãos e clientes v
 
 - **Backend:** Flask (Python)
 - **Banco de dados:** Supabase (PostgreSQL)
-- **WhatsApp:** Evolution API
+- **WhatsApp:** WhatsApp Cloud API (Meta) — API oficial
 - **IA:** OpenAI API (análise de sentimento)
-- **Webhooks:** Rotas Flask recebendo callbacks da Evolution API e outros serviços
+- **Webhooks:** Rotas Flask recebendo callbacks da WhatsApp Cloud API (Meta) e outros serviços
 - **Deploy:** Coolify + Docker no Hostinger VPS
 - **Frontend:** HTML/JS ou frameworks conforme vertical
 
@@ -25,7 +25,7 @@ O sistema lida com **dados sensíveis de cidadãos (LGPD)** e roda em produção
 
 Ao analisar o código, verifique:
 
-- [ ] **Toda chamada a API externa** (Supabase, Evolution API, OpenAI, qualquer `requests.post/get`) **deve estar dentro de `try/except`**
+- [ ] **Toda chamada a API externa** (Supabase, WhatsApp Cloud API, OpenAI, qualquer `requests.post/get`) **deve estar dentro de `try/except`**
 - [ ] Cada `except` deve ter uma **mensagem de erro específica** (nunca genérica como "Erro")
 - [ ] Todas as requisições HTTP devem ter **timeout configurado** (recomendado: 10-15 segundos)
   ```python
@@ -41,13 +41,15 @@ Ao analisar o código, verifique:
 ### Padrão recomendado:
 ```python
 try:
-    response = requests.post(EVOLUTION_API_URL, json=payload, timeout=15)
+    url = f"{WHATSAPP_API_URL}/{WHATSAPP_PHONE_NUMBER_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+    response = requests.post(url, json=payload, headers=headers, timeout=15)
     response.raise_for_status()
 except requests.exceptions.Timeout:
     logger.error(f"Timeout ao enviar WhatsApp para {telefone_mascarado}")
     # fallback: salvar na fila para reenvio
 except requests.exceptions.RequestException as e:
-    logger.error(f"Erro Evolution API: {str(e)} | telefone: {telefone_mascarado}")
+    logger.error(f"Erro WhatsApp Cloud API: {str(e)} | telefone: {telefone_mascarado}")
     # fallback: salvar na fila para reenvio
 ```
 
@@ -187,17 +189,21 @@ def health():
 - [ ] Toda rota de webhook **valida a origem da requisição** (secret/token no header ou query param)
   ```python
   # ❌ ERRADO - aceita qualquer requisição
-  @app.route('/webhook/evolution', methods=['POST'])
+  @app.route('/webhook', methods=['POST'])
   def webhook():
       data = request.json
       processar(data)
 
-  # ✅ CERTO - verifica se quem mandou é confiável
-  @app.route('/webhook/evolution', methods=['POST'])
+  # ✅ CERTO - valida a assinatura X-Hub-Signature-256 (HMAC do corpo CRU com o App Secret)
+  @app.route('/webhook', methods=['POST'])
   def webhook():
-      token = request.headers.get('Authorization')
-      if token != os.getenv('WEBHOOK_SECRET'):
-          logger.warning(f"Webhook rejeitado - token inválido: {request.remote_addr}")
+      import hmac, hashlib
+      assinatura = request.headers.get('X-Hub-Signature-256', '')
+      esperado = 'sha256=' + hmac.new(
+          os.getenv('WHATSAPP_APP_SECRET').encode(), request.get_data(), hashlib.sha256
+      ).hexdigest()
+      if not hmac.compare_digest(assinatura, esperado):
+          logger.warning(f"Webhook rejeitado - assinatura inválida: {request.remote_addr}")
           return jsonify({"error": "Não autorizado"}), 401
       data = request.json
       processar(data)
