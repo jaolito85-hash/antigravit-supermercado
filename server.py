@@ -3502,7 +3502,16 @@ def process_context_followup(remote_jid, push_name, text):
             if fb:
                 detail_note = f'Detalhe informado pelo cliente: {text}'
                 updated_msg = append_conversation_entry(fb.get('message', ''), 'client', detail_note)
-                update_feedback(feedback_id, {'message': updated_msg, 'updated_at': datetime.utcnow().isoformat()})
+                updates = {'message': updated_msg, 'updated_at': datetime.utcnow().isoformat()}
+                # Se o detalhe revela um setor específico (ex.: "foi na padaria"),
+                # re-categoriza o card para o setor certo. Crucial para o gerente
+                # rotear a reclamação ao departamento responsável (Padaria, Açougue...).
+                nova_categoria = classificar_categoria(text)
+                if nova_categoria and nova_categoria != 'Atendimento':
+                    updates['category'] = nova_categoria
+                    updates['region'] = classificar_setor(text)
+                    print(f"[RECLASSIFY] Card {feedback_id}: {fb.get('category')} -> {nova_categoria} (detalhe: {text[:40]})")
+                update_feedback(feedback_id, updates)
         clear_context(remote_jid)
         return {
             'reply': 'Anotado, obrigado pelo detalhe. Vai ajudar muito a equipe a resolver! ✅',
