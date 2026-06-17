@@ -2722,20 +2722,24 @@ def is_conversation_wrap_up(text):
     normalized = normalize_text(text or '').strip().rstrip('!.?')
     if not normalized:
         return False
+    # Guarda anti-reclamação: se há QUALQUER sinal de insatisfação, NÃO é despedida.
+    # Uma reclamação ("atendimento foi péssimo") tem que virar feedback, nunca tchau.
+    if any(sig in normalized for sig in NEGATIVE_SIGNAL_PATTERNS):
+        return False
     # Match exato
     if normalized in WRAP_UP_PATTERNS:
         return True
     # Match exato também para agradecimentos
     if normalized in THANK_YOU_PATTERNS:
         return True
-    # Mensagem curta (até 5 tokens) que começa ou contém padrão de encerramento
+    # Mensagem curta (até 6 tokens): casa o padrão apenas em FRONTEIRA DE PALAVRA.
+    # Substring (startswith/endswith) dava falso positivo grave — ex.: "ate" (até)
+    # casava com "atendimento", "atendente", e "...ate" casava com "tomate"/"abacate".
     tokens = [t for t in normalized.split() if t]
     if len(tokens) > 6:
         return False
-    return any(
-        normalized == pattern or normalized.startswith(pattern) or normalized.endswith(pattern)
-        for pattern in WRAP_UP_PATTERNS
-    )
+    padded = f' {normalized} '
+    return any(f' {pattern} ' in padded for pattern in WRAP_UP_PATTERNS)
 
 
 def is_greeting(text):
