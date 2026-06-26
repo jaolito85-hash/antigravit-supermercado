@@ -52,6 +52,22 @@ app.config.update(
     MAX_CONTENT_LENGTH=8 * 1024 * 1024,
 )
 
+
+@app.after_request
+def _set_security_headers(response):
+    """Cabeçalhos de segurança em todas as respostas (defesa em profundidade).
+
+    CSP foi deixado de fora de propósito: uma política restritiva pode quebrar o dashboard
+    (scripts/estilos inline, CDNs) — precisa auditar o HTML antes de habilitar.
+    """
+    response.headers.setdefault("X-Frame-Options", "DENY")            # anti-clickjacking
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")  # anti MIME-sniffing
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    # HSTS: o navegador só aplica sob HTTPS (ignora em HTTP), então é seguro definir sempre.
+    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
 # Config
 # WhatsApp Cloud API (Meta) — API oficial
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")                    # token de acesso (permanente)
