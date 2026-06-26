@@ -1,8 +1,8 @@
-flask
-supabase
-python-dotenv
-requests
-gunicorn
-openai
-thefuzz
-python-Levenshtein
+flask==3.0.3
+supabase==2.5.0
+python-dotenv==1.0.1
+requests==2.32.5
+gunicorn==25.1.0
+openai==2.29.0
+thefuzz==0.22.1
+python-Levenshtein==0.27.3

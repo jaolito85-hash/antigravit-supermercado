@@ -1,0 +1,23 @@
+# Segredos e ambiente — NUNCA devem entrar na imagem
+.env
+.env.*
+
+# Histórico e metadados do git
+.git
+.gitignore
+
+# Cache/artefatos do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ferramentas de dev e temporários
+.claude/
+.tmp/
+
+# Documentação e notas de planejamento (não usadas em runtime)
+*.md
+directives/
+
+# Assets de trabalho fora do app
+pipico-perfil.jpg
