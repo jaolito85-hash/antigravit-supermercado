@@ -5867,14 +5867,12 @@ def api_health():
             _ms = int((_time.time() - _start) * 1000)
 
             if resp.status_code == 200:
-                data = resp.json()
-                detail = "conectado"
-                if isinstance(data, dict):
-                    detail = f"{data.get('verified_name', 'número')} (qualidade: {data.get('quality_rating', 'n/a')})"
+                # Não expomos verified_name/quality_rating publicamente (dados da conta
+                # WhatsApp Business) — esta rota não exige login. Só confirma a conexão.
                 results["whatsapp"] = {
                     "status": "up",
                     "ms": _ms,
-                    "detail": detail,
+                    "detail": "conectado",
                     "connected": True
                 }
             else:
