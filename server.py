@@ -44,6 +44,11 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",     # mitiga CSRF em navegação cross-site
     SESSION_COOKIE_SECURE=_cookie_secure,
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+    # Limite de tamanho do corpo de QUALQUER requisição (anti-DoS por memória).
+    # O Werkzeug rejeita com 413 ANTES de carregar o corpo, protegendo o /webhook público
+    # (que lê o corpo cru p/ validar o HMAC). 8 MB acomoda o maior upload legítimo
+    # (banner de promoção); o webhook real da Meta tem apenas alguns KB.
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
 )
 
 # Config
@@ -56,6 +61,12 @@ WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET")
 # URL base do Graph API. Versão fixada para previsibilidade.
 WHATSAPP_API_URL = "https://graph.facebook.com/v22.0"
 
+# Timeout (segundos) das chamadas à OpenAI. O SDK usa 600s por padrão — sem isto, uma
+# chamada travada seguraria a thread de processamento (e o sender-lock) por até 10 min.
+# Aplicado no construtor do cliente, vale para todas as chamadas; um timeout= explícito
+# no .create() (ex.: pré-filtro de moderação) tem precedência sobre este.
+OPENAI_TIMEOUT = 15
+
 def _startup_security_audit():
     """Avisa no log (no boot) sobre variáveis de segurança críticas ausentes.
     Roda no import, então aparece também sob Gunicorn."""
@@ -63,7 +74,10 @@ def _startup_security_audit():
     if not os.getenv("WHATSAPP_VERIFY_TOKEN"):
         avisos.append("WHATSAPP_VERIFY_TOKEN ausente — a verificação (GET) do webhook do Meta vai falhar.")
     if not os.getenv("WHATSAPP_APP_SECRET"):
-        avisos.append("WHATSAPP_APP_SECRET ausente — webhook aceita qualquer origem (assinatura não validada).")
+        if os.getenv("WEBHOOK_INSECURE_DEV", "").strip().lower() in ("1", "true", "yes"):
+            avisos.append("WHATSAPP_APP_SECRET ausente + WEBHOOK_INSECURE_DEV=true — webhook ACEITA qualquer origem (somente desenvolvimento!).")
+        else:
+            avisos.append("WHATSAPP_APP_SECRET ausente — webhook REJEITA todos os POSTs (fail-closed). Configure-o para produção.")
     if not os.getenv("ADMIN_USER") or not os.getenv("ADMIN_PASS"):
         avisos.append("ADMIN_USER/ADMIN_PASS ausentes — login do dashboard desabilitado.")
     if not os.getenv("SECRET_KEY"):
@@ -437,7 +451,7 @@ def transcribe_audio(audio_content):
     try:
         from openai import OpenAI
         from io import BytesIO
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         audio_file = BytesIO(audio_content)
         audio_file.name = "audio.ogg"
         transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
@@ -504,7 +518,7 @@ def normalize_audio_transcript(raw_text, remote_jid):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Voce recebe a transcricao bruta de um audio de WhatsApp de um cliente de supermercado.
 
 Sua tarefa e reescrever a fala em um texto curto, claro e fiel ao que a pessoa quis dizer.
@@ -1757,7 +1771,7 @@ def classificar_com_ia(texto):
         return None
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Classifique este feedback de um cliente de supermercado.
 Texto: "{texto}"
 
@@ -1832,7 +1846,7 @@ def detectar_intencao(texto):
     if api_key:
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=api_key)
+            client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
             prompt = f'''Classifique a INTENÇÃO desta mensagem de um cliente de supermercado.
 Mensagem: "{texto}"
 
@@ -1871,7 +1885,7 @@ def generate_pergunta_geral_response(text):
     
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Você é {AGENT_NAME}, atendente do supermercado {MARKET_NAME}.
 O cliente fez uma PERGUNTA GERAL sobre o mercado. Responda com base nestas informações:
 
@@ -1907,7 +1921,7 @@ def generate_ai_response(text, category, urgency):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
 
         system_msg = f'''Você é {AGENT_NAME}, assistente virtual de um supermercado.
 REGRAS ABSOLUTAS:
@@ -1959,7 +1973,7 @@ def extrair_produto_ia(texto):
     
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Extraia APENAS o nome do produto de supermercado desta mensagem.
 Mensagem: "{texto}"
 
@@ -2016,7 +2030,7 @@ def extrair_itens_lista_ia(texto):
     
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Extraia APENAS os nomes dos produtos de supermercado desta mensagem.
 Mensagem: "{texto}"
 
@@ -2095,7 +2109,7 @@ def generate_receita_response():
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Você é {AGENT_NAME} de um supermercado. Sugira UMA receita simples e gostosa usando ingredientes disponíveis no mercado.
 
 Produtos disponíveis: {', '.join(prods_disponiveis)}
@@ -2391,7 +2405,7 @@ def detectar_intencao(texto):
     if api_key:
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=api_key)
+            client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
             system_msg = f'''Classifique a intenção de mensagens recebidas no WhatsApp do supermercado {MARKET_NAME}.
 Você deve escolher APENAS uma destas intenções:
 - promocoes: pergunta sobre ofertas, promoções ou encarte da semana
@@ -2464,7 +2478,7 @@ def generate_promocoes_response(text=""):
     if api_key:
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=api_key)
+            client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -2514,7 +2528,7 @@ def generate_unavailable_product_response(text=""):
         return fallback
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -2548,7 +2562,7 @@ def generate_pergunta_geral_response(text):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -2585,7 +2599,7 @@ def generate_ai_response(text, category, urgency):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         user_msg = f'''Tipo de feedback:
 - Categoria: {category}
 - Intensidade: {urgency}
@@ -2947,7 +2961,7 @@ def generate_pergunta_geral_response(text):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -3001,7 +3015,7 @@ def generate_ai_response(text, category, urgency, conversation_entries=None):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         user_msg = f'''Tipo de feedback:
 - Categoria: {category}
 - Intensidade: {urgency}
@@ -3091,7 +3105,7 @@ def generate_ai_response(text, category, urgency, conversation_entries=None, rem
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         user_msg = f'''Tipo de feedback:
 - Categoria: {category}
 - Intensidade: {urgency}
@@ -3167,7 +3181,7 @@ def generate_greeting_response(text, push_name=None, casual_count=0):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -3318,7 +3332,7 @@ def classificar_com_ia(texto):
         }
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         prompt = f'''Classifique este feedback de um cliente de supermercado.
 Texto: "{texto}"
 
@@ -3823,7 +3837,7 @@ def generate_ai_pulse(feedbacks):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         recent = feedbacks[:50]
         sentimentos = Counter([f.get('urgency', 'Neutro') for f in recent])
         categorias = Counter([f.get('category', 'Geral') for f in recent])
@@ -4057,7 +4071,7 @@ def check_message_with_ai(text, is_prefeitura=False):
 
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
 
         context_rules = """REGRA (SUPERMERCADO):
 - Nenhum contexto de denúncia criminal aqui.
@@ -4382,6 +4396,22 @@ def get_banners_route():
     """Retorna as URLs dos banners de promoção ativos."""
     return jsonify(get_banner_urls())
 
+# Validação de upload de banner: aceita só imagens reais (magic bytes) e NÃO confia no
+# content-type que o cliente envia (é forjável). A Cloud API da Meta envia imagem como
+# image/jpeg ou image/png.
+_BANNER_IMAGE_MAGIC = (
+    (b"\xff\xd8\xff", "image/jpeg"),       # JPEG
+    (b"\x89PNG\r\n\x1a\n", "image/png"),   # PNG
+)
+BANNER_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+def _sniff_banner_mime(data):
+    """Retorna o mime real da imagem pelos magic bytes, ou None se não for um formato aceito."""
+    for sig, mime in _BANNER_IMAGE_MAGIC:
+        if data.startswith(sig):
+            return mime
+    return None
+
 @app.route("/api/banners/upload", methods=["POST"])
 @login_required
 def upload_banner_route():
@@ -4399,7 +4429,17 @@ def upload_banner_route():
 
     # Nome fixo por tipo — upsert substitui o banner anterior automaticamente
     storage_filename = f"{banner_type}.jpg"
-    mimetype = file.mimetype or "image/jpeg"
+
+    # Lê e VALIDA antes de subir: tamanho + magic bytes (conteúdo real é imagem).
+    # Não confiamos no content-type informado pelo cliente.
+    file_bytes = file.read()
+    if not file_bytes:
+        return jsonify({"error": "Arquivo vazio."}), 400
+    if len(file_bytes) > BANNER_MAX_BYTES:
+        return jsonify({"error": "Arquivo muito grande (máximo 5 MB)."}), 413
+    real_mime = _sniff_banner_mime(file_bytes)
+    if not real_mime:
+        return jsonify({"error": "Arquivo não é uma imagem válida. Envie JPG ou PNG."}), 400
 
     # Usa o cliente admin (service_role) para o upload — necessário para
     # contornar as políticas de RLS do Supabase Storage
@@ -4408,11 +4448,10 @@ def upload_banner_route():
         return jsonify({"error": "Supabase indisponível."}), 500
 
     try:
-        file_bytes = file.read()
         sb_admin.storage.from_(BANNER_BUCKET).upload(
             path=storage_filename,
             file=file_bytes,
-            file_options={"content-type": mimetype, "upsert": "true"}
+            file_options={"content-type": real_mime, "upsert": "true"}
         )
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/{BANNER_BUCKET}/{storage_filename}"
         save_banner_url(banner_type, public_url)
@@ -4647,7 +4686,7 @@ def generate_recovery_message():
     
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         
         samples_text = "\n".join([f'- "{s[:100]}"' for s in sample_messages[:5]])
         
@@ -5546,22 +5585,36 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
 
 _webhook_token_warned = False
 
+# Bypass da validação de assinatura APENAS para desenvolvimento local.
+# Em produção esta flag NÃO deve ser definida — sem APP_SECRET, o webhook rejeita tudo
+# (fail-closed), para que um erro de configuração falhe de forma VISÍVEL (o webhook para
+# de funcionar) em vez de abrir a porta para mensagens forjadas.
+WEBHOOK_INSECURE_DEV = os.getenv("WEBHOOK_INSECURE_DEV", "").strip().lower() in ("1", "true", "yes")
+
 def _verify_webhook_signature(req):
     """Valida a origem do POST do webhook pela assinatura X-Hub-Signature-256.
 
     A Cloud API assina o corpo CRU com HMAC-SHA256 usando o App Secret do app Meta.
     O header chega como 'sha256=<hex>'; comparamos com o HMAC do corpo recebido.
 
-    Se WHATSAPP_APP_SECRET não estiver configurado, deixa passar (mas avisa uma vez no
-    log) — útil para teste local. Em produção, configure-o (PRODUCTION_CHECKLIST §8).
+    FAIL-CLOSED: se WHATSAPP_APP_SECRET não estiver configurado, o webhook REJEITA a
+    requisição — a menos que WEBHOOK_INSECURE_DEV=true (só para teste local). Assim,
+    esquecer o segredo em produção derruba o webhook de forma visível, em vez de aceitar
+    silenciosamente qualquer origem (PRODUCTION_CHECKLIST §8).
     """
     global _webhook_token_warned
     if not WHATSAPP_APP_SECRET:
+        if WEBHOOK_INSECURE_DEV:
+            if not _webhook_token_warned:
+                print("⚠️ [WEBHOOK] WHATSAPP_APP_SECRET ausente + WEBHOOK_INSECURE_DEV=true — "
+                      "validação de assinatura DESLIGADA (somente desenvolvimento local).")
+                _webhook_token_warned = True
+            return True
         if not _webhook_token_warned:
-            print("⚠️ [WEBHOOK] WHATSAPP_APP_SECRET não configurado — o webhook está ACEITANDO "
-                  "qualquer origem. Configure WHATSAPP_APP_SECRET no .env para produção.")
+            print("❌ [WEBHOOK] WHATSAPP_APP_SECRET não configurado — REJEITANDO todos os webhooks "
+                  "(fail-closed). Configure WHATSAPP_APP_SECRET no .env/Coolify para produção.")
             _webhook_token_warned = True
-        return True
+        return False
 
     import hmac
     import hashlib
@@ -5676,6 +5729,16 @@ def debug_env():
 
 # --- HEALTH CHECK ENDPOINT (usado pelo CRM Monitor) ---
 
+# Cache do health check (anti-DoS / anti-amplificação).
+# A rota é pública e dispara 3 chamadas externas (Supabase, Meta, OpenAI) por hit — sem
+# cache, é possível esgotar os 2 workers e amplificar tráfego contra os provedores usando
+# suas credenciais. O CRM consulta só a cada 5 min, então servir um resultado de até 60s
+# atrás é transparente. Cache por-worker (como o ai_pulse_cache): no pior caso 2 disparos
+# por janela em vez de ilimitados.
+_health_cache = {"data": None, "ts": 0.0}
+_health_cache_lock = threading.Lock()
+HEALTH_CACHE_TTL_SECONDS = 60
+
 @app.route("/api/health")
 def api_health():
     """Retorna o status de todos os serviços que o Atacaforte precisa pra funcionar.
@@ -5685,8 +5748,18 @@ def api_health():
 
     Não precisa de login — é uma rota pública simples.
     Mas não expõe dados sensíveis, só status up/down.
+    O resultado é cacheado por HEALTH_CACHE_TTL_SECONDS para não virar vetor de DoS.
     """
     import time as _time
+
+    # Serve o resultado cacheado se ainda estiver fresco — evita disparar as 3 chamadas
+    # externas a cada hit. Hits repetidos não amplificam tráfego nem prendem workers.
+    with _health_cache_lock:
+        cached = _health_cache["data"]
+        cached_age = _time.time() - _health_cache["ts"]
+    if cached is not None and cached_age < HEALTH_CACHE_TTL_SECONDS:
+        return jsonify(cached)
+
     results = {}
     overall = "up"
 
@@ -5826,14 +5899,18 @@ def api_health():
             overall = "down"
             break
 
-    return jsonify({
+    payload = {
         "project": "atacaforte_supermercado",
         "project_name": "Atacaforte (Seu Pipico)",
         "port": 5003,
         "overall": overall,
         "checked_at": datetime.utcnow().isoformat(),
         "services": results
-    })
+    }
+    with _health_cache_lock:
+        _health_cache["data"] = payload
+        _health_cache["ts"] = _time.time()
+    return jsonify(payload)
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5003))
