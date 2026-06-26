@@ -5658,10 +5658,15 @@ def _verify_webhook_signature(req):
 def webhook():
     # --- GET: verificação do webhook pelo Meta (handshake inicial) ---
     if request.method == "GET":
+        import hmac
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
-        if mode == "subscribe" and token and token == WHATSAPP_VERIFY_TOKEN:
+        # compare_digest: comparação em tempo constante (evita timing attack no token).
+        # O guard `token and WHATSAPP_VERIFY_TOKEN` garante strings não-vazias antes da
+        # comparação (compare_digest lança TypeError se algum for None).
+        if (mode == "subscribe" and token and WHATSAPP_VERIFY_TOKEN
+                and hmac.compare_digest(token, WHATSAPP_VERIFY_TOKEN)):
             print("✅ [WEBHOOK] Verificação do Meta OK.")
             return (challenge or ""), 200
         print("❌ [WEBHOOK] Verificação do Meta falhou (token não confere).")
