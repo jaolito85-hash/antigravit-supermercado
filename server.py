@@ -7,6 +7,7 @@ import re
 import unicodedata
 import time
 import threading
+import tempfile
 from difflib import SequenceMatcher
 from io import StringIO
 from contextlib import contextmanager
@@ -578,9 +579,38 @@ def load_json(filepath, default):
     except:
         return default
 
+# Locks por-arquivo para serializar as escritas de JSON (estado de moderação/handoff/etc).
+_json_write_locks = {}
+_json_write_locks_guard = threading.Lock()
+
+
+def _get_json_lock(filepath):
+    with _json_write_locks_guard:
+        lock = _json_write_locks.get(filepath)
+        if lock is None:
+            lock = threading.Lock()
+            _json_write_locks[filepath] = lock
+        return lock
+
+
 def save_json(filepath, data):
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    """Grava o JSON de forma ATÔMICA (tmp no mesmo dir + os.replace) e serializada por
+    arquivo. Evita corrupção se o processo cair no meio da escrita (open('w') truncava o
+    arquivo, podendo zerar todo o estado de moderação/handoff) e lost-updates entre threads."""
+    with _get_json_lock(filepath):
+        dirpath = os.path.dirname(filepath) or "."
+        os.makedirs(dirpath, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".json", dir=dirpath)
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, filepath)  # rename atômico no mesmo filesystem
+        except Exception:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+            raise
 
 def load_moderation_state():
     return load_json(MODERATION_FILE, {})
