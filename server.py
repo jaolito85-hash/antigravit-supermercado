@@ -5113,6 +5113,32 @@ _message_buffer = {}
 _message_buffer_lock = threading.Lock()
 MESSAGE_BATCH_DELAY = 3  # segundos de espera para juntar mensagens
 
+# Idempotência de webhooks: a Meta pode reentregar o mesmo evento (retry em blip de rede).
+# Guardamos os message.id já vistos, com expiração, para não processar a mesma mensagem
+# duas vezes (resposta duplicada, contadores de rate-limit dobrados).
+_processed_message_ids = {}  # {message_id: timestamp}
+_processed_ids_lock = threading.Lock()
+PROCESSED_ID_TTL_SECONDS = 600  # 10 min
+
+
+def _already_processed(message_id):
+    """True se message_id já foi visto dentro do TTL; senão registra e retorna False."""
+    if not message_id:
+        return False
+    now = time_now()
+    with _processed_ids_lock:
+        # Limpeza preguiçosa: ao crescer, remove ids expirados (evita memória ilimitada).
+        if len(_processed_message_ids) > 5000:
+            expirados = [m for m, t in _processed_message_ids.items()
+                         if now - t > PROCESSED_ID_TTL_SECONDS]
+            for m in expirados:
+                _processed_message_ids.pop(m, None)
+        seen_at = _processed_message_ids.get(message_id)
+        if seen_at is not None and now - seen_at < PROCESSED_ID_TTL_SECONDS:
+            return True
+        _processed_message_ids[message_id] = now
+        return False
+
 
 def _flush_message_buffer(remote_jid):
     """Processa todas as mensagens acumuladas do remetente após o delay."""
@@ -5672,6 +5698,12 @@ def webhook():
 
         if not from_number:
             return jsonify({"status": "ignored_no_sender"}), 200
+
+        # Idempotência: a Meta pode reentregar o mesmo webhook (retry em blip de rede).
+        # Sem isto, a mensagem seria processada 2x (resposta duplicada, contadores dobrados).
+        if _already_processed(msg.get("id")):
+            print(f"[IDEMPOTENT] Webhook repetido ignorado de {mascarar_telefone(from_number)}")
+            return jsonify({"status": "duplicate_ignored"}), 200
 
         # Proteção contra replay attack (timestamp em segundos, como string)
         msg_timestamp = msg.get("timestamp")
