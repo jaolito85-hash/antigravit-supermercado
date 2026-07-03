@@ -84,6 +84,11 @@ WHATSAPP_API_URL = "https://graph.facebook.com/v22.0"
 # no .create() (ex.: pré-filtro de moderação) tem precedência sobre este.
 OPENAI_TIMEOUT = 15
 
+# Modelo de chat da OpenAI. Fica em variável de ambiente para facilitar trocas futuras
+# sem mexer no código. Família GPT-5: usar max_completion_tokens (não max_tokens) e
+# `temperature` apenas no default (1) — por isso as chamadas abaixo não fixam temperature.
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+
 def _startup_security_audit():
     """Avisa no log (no boot) sobre variáveis de segurança críticas ausentes.
     Roda no import, então aparece também sob Gunicorn."""
@@ -560,10 +565,9 @@ Formato de saida:
 '''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=180,
-            temperature=0.1
+            max_completion_tokens=180
         )
         result_text = response.choices[0].message.content.strip()
         if result_text.startswith('```'):
@@ -1831,9 +1835,9 @@ Responda APENAS em JSON:
 Critico = emergências, risco. Urgente = problemas fortes. Positivo = elogios. Neutro = perguntas.'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100, temperature=0
+            max_completion_tokens=100
         )
         result_text = response.choices[0].message.content.strip()
         if result_text.startswith('```'):
@@ -1904,9 +1908,9 @@ Possíveis intenções:
 Responda APENAS com a intenção, sem explicação.'''
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=20, temperature=0
+                max_completion_tokens=20
             )
             intent = response.choices[0].message.content.strip().lower().replace('"', '').replace("'", '')
             print(f"🧠 [AI-INTENT] {intent}")
@@ -1949,9 +1953,9 @@ Pergunta do cliente: "{text}"
 RESPONDA de forma amigável e direta (máximo 2 frases). Use no máximo 1 emoji.'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100, temperature=0.7
+            max_completion_tokens=100
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -1992,12 +1996,12 @@ Mensagem do cliente: "{text}"
 Gere UMA resposta criativa e única como {AGENT_NAME}:'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system_msg},
                 {"role": "user", "content": user_msg}
             ],
-            max_tokens=120, temperature=0.9
+            max_completion_tokens=120
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -2032,9 +2036,9 @@ Exemplos:
 - "quanto custa o óleo de soja" → "óleo de soja"'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=30, temperature=0
+            max_completion_tokens=30
         )
         result = response.choices[0].message.content.strip().strip('"').strip("'").lower()
         print(f"[PRODUTO-IA] Extraiu: {result}")
@@ -2086,9 +2090,9 @@ Exemplo: "preciso de 2kg de carne e um pacote de arroz" → "carne, arroz"
 Exemplo: "lista de compras arroz" → "arroz"'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100, temperature=0
+            max_completion_tokens=100
         )
         result = response.choices[0].message.content.strip()
         # Remove aspas se houver
@@ -2168,9 +2172,9 @@ Modo de fazer: (3-4 passos breves)
 Máximo 500 caracteres total. NÃO inclua preços na receita.'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=200, temperature=0.9
+            max_completion_tokens=200
         )
         receita = response.choices[0].message.content.strip()
         # Adiciona sugestão de lista de ingredientes com preços
@@ -2472,13 +2476,12 @@ REGRAS IMPORTANTES:
 
 Classifique a intenção considerando que {AGENT_NAME} NÃO tem acesso a estoque, CRM ou previsão de chegada.'''
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=OPENAI_MODEL,
                 messages=[
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=20,
-                temperature=0
+                max_completion_tokens=20
             )
             intent = response.choices[0].message.content.strip().lower().replace('"', '').replace("'", '')
             print(f"[AI-INTENT] {intent}")
@@ -2526,7 +2529,7 @@ def generate_promocoes_response(text=""):
             from openai import OpenAI
             client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=OPENAI_MODEL,
                 messages=[
                     {"role": "system", "content": build_pipico_system_prompt()},
                     {
@@ -2547,8 +2550,7 @@ Responda de forma natural, breve e útil.
 - Não fale sobre estoque, reposição ou chegada'''
                     }
                 ],
-                max_tokens=140,
-                temperature=0.35
+                max_completion_tokens=140
             )
             reply = response.choices[0].message.content.strip()
             if reply.startswith('"') and reply.endswith('"'):
@@ -2576,7 +2578,7 @@ def generate_unavailable_product_response(text=""):
         from openai import OpenAI
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": f"""O cliente mandou uma mensagem sobre um produto:
@@ -2588,8 +2590,7 @@ Responda como {AGENT_NAME} com empatia e honestidade:
 - Diga que vai deixar registrado para a equipe do mercado ficar sabendo
 - Máximo 2 frases, tom acolhedor"""}
             ],
-            max_tokens=100,
-            temperature=0.65
+            max_completion_tokens=100
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -2610,7 +2611,7 @@ def generate_pergunta_geral_response(text):
         from openai import OpenAI
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {
@@ -2622,8 +2623,7 @@ Pergunta: "{text}"
 Responda de forma breve. Se a informação não estiver disponível no contexto, diga que não consegue confirmar por aqui sem inventar nada.'''
                 }
             ],
-            max_tokens=100,
-            temperature=0.4
+            max_completion_tokens=100
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -2661,13 +2661,12 @@ Gere uma resposta curta de {AGENT_NAME}.
 - Se houver concorrente citado, reconheça a comparação com respeito
 - Não invente solução já executada'''
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
-            max_tokens=120,
-            temperature=0.7
+            max_completion_tokens=120
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -3009,7 +3008,7 @@ def generate_pergunta_geral_response(text):
         from openai import OpenAI
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {
@@ -3021,8 +3020,7 @@ Pergunta: "{text}"
 Responda de forma breve. Se a informação não estiver disponível no contexto, diga que não consegue confirmar por aqui sem inventar nada.'''
                 }
             ],
-            max_tokens=100,
-            temperature=0.4
+            max_completion_tokens=100
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -3078,13 +3076,12 @@ Gere uma resposta curta de {AGENT_NAME}.
 - Se o cliente só agradecer, responda com algo simples e natural
 - Não invente solução já executada'''
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
-            max_tokens=120,
-            temperature=0.5
+            max_completion_tokens=120
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -3172,13 +3169,12 @@ Gere uma resposta curta de {AGENT_NAME}.
 - Nao invente solucao ja executada
 - Evite repetir "ja deixei seu relato registrado para acompanhamento" se isso ja foi dito na ultima resposta{instrucao_escalada}{instrucao_recorrente}'''
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": user_msg}
             ],
-            max_tokens=120,
-            temperature=0.65
+            max_completion_tokens=120
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -3229,13 +3225,12 @@ def generate_greeting_response(text, push_name=None, casual_count=0):
         from openai import OpenAI
         client = OpenAI(api_key=api_key, timeout=OPENAI_TIMEOUT, max_retries=1)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": build_pipico_system_prompt()},
                 {"role": "user", "content": greeting_prompt}
             ],
-            max_tokens=80,
-            temperature=0.7
+            max_completion_tokens=80
         )
         reply = response.choices[0].message.content.strip()
         if reply.startswith('"') and reply.endswith('"'):
@@ -3391,10 +3386,9 @@ Responda APENAS em JSON:
 
 Use "Promoção" para promoções, ofertas, descontos e comparações de preço com concorrentes.'''
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=120,
-            temperature=0
+            max_completion_tokens=120
         )
         result_text = response.choices[0].message.content.strip()
         if result_text.startswith('```'):
@@ -3896,9 +3890,9 @@ Feedbacks: {feedback_list}
 Status (🟢 Ótimo / 🟡 Atenção / 🔴 Crítico) + Insight principal. Máximo 150 caracteres.'''
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=100, temperature=0.7
+            max_completion_tokens=100
         )
         summary = response.choices[0].message.content.strip()
         status = "critical" if "🔴" in summary else ("warning" if "🟡" in summary else "good")
@@ -4142,10 +4136,9 @@ Responda APENAS em JSON:
 {{"inappropriate": true/false, "category": "...", "reason": "motivo curto"}}"""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=60,
-            temperature=0,
+            max_completion_tokens=60,
             timeout=5
         )
 
@@ -4756,9 +4749,9 @@ REGRAS:
 Escreva APENAS a mensagem, sem explicações.'''
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=300, temperature=0.8
+            max_completion_tokens=300
         )
         msg = response.choices[0].message.content.strip()
         return jsonify({"message": msg, "generated": True})
@@ -5597,12 +5590,12 @@ def _process_webhook_text_message_locked(remote_jid, push_name, text):
                     from openai import OpenAI
                     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
                     resp = client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model=OPENAI_MODEL,
                         messages=[{"role": "system", "content": f'''Você é {AGENT_NAME}, atendente do supermercado. O cliente enviou mais uma mensagem complementando o que disse antes.
                                     MENSAGEM NOVA: "{text}"
                                     SEJA BREVE (Máximo 1 frase). Confirme que anotou a informação.
                                     Use emoji apenas se combinar com o contexto. Nunca use emoji sorrindo em reclamação.'''}],
-                        max_tokens=60,
+                        max_completion_tokens=60,
                         timeout=15
                     )
                     reply = resp.choices[0].message.content.strip()
